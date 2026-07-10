@@ -1,0 +1,384 @@
+/* ═══════════════════════════════════════
+   PROJECTS PAGE CSS
+   Restyled to match Quotations page design language —
+   same amber/orange accent, card shadows, radii, fonts.
+   Save to: src/styles/projects.css
+═══════════════════════════════════════ */
+
+/* ── Page header ── */
+.prj-page-head  { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.prj-page-title { font-size: 1.45rem; font-weight: 700; color: #2E2E2E; margin: 0 0 .2rem; }
+.prj-page-sub   { font-size: .82rem; color: #64748b; margin: 0; }
+
+/* ── Add button ── */
+.prj-add-btn {
+  display: inline-flex; align-items: center; gap: .45rem;
+  padding: .55rem 1.1rem;
+  background: linear-gradient(135deg, #E8741C, #C25A0F);
+  color: #fff; border: none; border-radius: 10px;
+  font-size: .85rem; font-weight: 600; cursor: pointer;
+  white-space: nowrap; box-shadow: 0 2px 8px rgba(232,116,28,.35);
+  transition: all .18s;
+}
+.prj-add-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(232,116,28,.4); }
+
+/* ── Toolbar (search + status filter) ── */
+.prj-toolbar     { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.prj-search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 340px; }
+.prj-search-icon { position: absolute; left: .8rem; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+.prj-search-input {
+  width: 100%; padding: .55rem .9rem .55rem 2.2rem;
+  border: 1px solid #e2e8f0; border-radius: 10px;
+  font-size: .83rem; background: #fff; color: #2E2E2E;
+  transition: border-color .15s, box-shadow .15s; outline: none; box-sizing: border-box;
+}
+.prj-search-input:focus { border-color: #E8741C; box-shadow: 0 0 0 3px rgba(232,116,28,.12); }
+.prj-search-input::placeholder { color: #94a3b8; }
+
+.prj-status-select {
+  padding: .55rem .9rem; border: 1px solid #e2e8f0; border-radius: 10px;
+  font-size: .83rem; background: #fff; color: #2E2E2E; cursor: pointer;
+  outline: none; transition: border-color .15s, box-shadow .15s; min-width: 140px;
+}
+.prj-status-select:focus { border-color: #E8741C; box-shadow: 0 0 0 3px rgba(232,116,28,.12); }
+
+/* ── Grid of project cards ── */
+.prj-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(315px, 1fr));
+  gap: 1.1rem;
+  margin-top: 0.5rem;
+}
+
+/* ── Single project card ── */
+.prj-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.1rem 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .05);
+  transition: box-shadow .2s, transform .2s, border-color .2s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.prj-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #E8741C, #C25A0F);
+}
+
+.prj-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .1);
+  transform: translateY(-2px);
+  border-color: #F2A057;
+}
+
+.prj-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prj-card-icon {
+  width: 34px;
+  height: 34px;
+  background: #FBF4EC;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #C25A0F;
+  flex-shrink: 0;
+}
+
+.prj-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: .22rem .65rem;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+}
+
+/* Status dropdown styled as a pill — sits where the old static badge was */
+.prj-status-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: .22rem 1.5rem .22rem .65rem;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .55rem center;
+  background-size: 9px;
+  transition: filter .15s;
+}
+.prj-status-pill:hover  { filter: brightness(0.96); }
+.prj-status-pill:focus  { box-shadow: 0 0 0 2px rgba(0,0,0,.08); }
+
+.prj-card-project-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #e8741c;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.prj-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2E2E2E;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.prj-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.prj-card-meta span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.prj-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 0.7rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.prj-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.prj-icon-btn:hover { background: #f1f5f9; color: #2E2E2E; border-color: #cbd5e1; }
+.prj-icon-btn.danger:hover { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+
+.prj-open-label {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.75rem;
+  color: #E8741C;
+  font-weight: 600;
+}
+
+/* ── Detail view ── */
+.prj-detail-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.prj-back-btn {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #2E2E2E;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.prj-back-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+.prj-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.prj-detail-meta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* ── Tabs ── */
+.prj-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 1.25rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.prj-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.55rem 1.1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+  border-radius: 6px 6px 0 0;
+}
+
+.prj-tab:hover { color: #C25A0F; background: #FBF4EC; }
+.prj-tab.active { color: #C25A0F; font-weight: 700; border-bottom-color: #E8741C; background: #FBF4EC; }
+
+/* ── Tab header (title + button) ── */
+.prj-tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.prj-tab-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2E2E2E;
+  margin: 0;
+}
+
+/* ── Action buttons in table rows ── */
+.prj-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s;
+}
+.prj-action-btn:hover       { background: #f1f5f9; color: #2E2E2E; border-color: #cbd5e1; }
+.prj-action-btn.green       { color: #10b981; border-color: #a7f3d0; background: #f0fdf4; }
+.prj-action-btn.green:hover { background: #10b981; color: #fff; border-color: #10b981; }
+.prj-action-btn.danger:hover{ background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+
+/* ── Invoice KPI cards ── */
+.prj-inv-kpi {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.prj-kpi-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.prj-kpi-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+  background: linear-gradient(180deg, #E8741C, #C25A0F);
+}
+.prj-kpi-card span   { font-size: 0.72rem; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+.prj-kpi-card strong { font-size: 1.1rem; font-weight: 700; color: #2E2E2E; }
+.prj-kpi-card.green::before { background: linear-gradient(180deg, #10b981, #059669); }
+.prj-kpi-card.green strong { color: #10b981; }
+.prj-kpi-card.red::before   { background: linear-gradient(180deg, #ef4444, #b91c1c); }
+.prj-kpi-card.red strong   { color: #ef4444; }
+
+/* ── Quotation picker (client → quotations → invoice flow) ── */
+.prj-client-picker {
+  display: flex; flex-wrap: wrap; gap: .5rem;
+  margin-bottom: 1rem;
+}
+.prj-client-chip {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .45rem .85rem; border: 1.5px solid #e2e8f0; border-radius: 20px;
+  background: #fff; color: #64748b; font-size: .8rem; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.prj-client-chip:hover  { border-color: #F2A057; color: #C25A0F; background: #FBF4EC; }
+.prj-client-chip.active { border-color: #E8741C; background: #FBF4EC; color: #C25A0F; }
+.prj-client-chip .count {
+  background: #E8741C; color: #fff; border-radius: 10px;
+  font-size: .68rem; padding: 1px 7px; font-weight: 700;
+}
+
+.prj-quote-pick-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: .85rem; margin-bottom: 1.25rem;
+}
+.prj-quote-pick-card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: .9rem 1rem; box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  transition: all .15s;
+}
+.prj-quote-pick-card.has-invoice { opacity: .65; }
+.prj-quote-pick-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .4rem; }
+.prj-quote-pick-num  { font-size: .73rem; font-weight: 700; color: #E8741C; letter-spacing: .03em; text-transform: uppercase; }
+.prj-quote-pick-amt  { font-size: .95rem; font-weight: 700; color: #2E2E2E; margin: .2rem 0 .6rem; }
+.prj-quote-pick-cta {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: .4rem;
+  padding: .45rem; border-radius: 8px; border: none; cursor: pointer;
+  font-size: .8rem; font-weight: 600;
+  background: linear-gradient(135deg, #E8741C, #C25A0F); color: #fff;
+  transition: all .15s;
+}
+.prj-quote-pick-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(232,116,28,.35); }
+.prj-quote-pick-cta:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .prj-inv-kpi { grid-template-columns: repeat(3, 1fr); gap: .6rem; }
+}
+
+@media (max-width: 768px) {
+  .prj-grid { grid-template-columns: 1fr; }
+  .prj-inv-kpi { grid-template-columns: 1fr; }
+  .prj-detail-bar { flex-direction: column; align-items: flex-start; }
+  .prj-quote-pick-grid { grid-template-columns: 1fr; }
+  .prj-page-head { flex-direction: column; align-items: flex-start; gap: .6rem; }
+  .prj-page-title { font-size: 1.2rem; }
+  .prj-add-btn { width: 100%; justify-content: center; }
+  .prj-toolbar { flex-direction: column; align-items: stretch; gap: .6rem; }
+  .prj-search-wrap { max-width: 100%; }
+  .prj-status-select { width: 100%; }
+}

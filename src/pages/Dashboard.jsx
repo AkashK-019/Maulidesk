@@ -1,0 +1,285 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../supabase';
+import {
+  FileText, TrendingUp, Users, Package,
+  ArrowRight, Loader2, RefreshCw, Landmark
+} from 'lucide-react';
+import { formatCurrency } from '../utils/helpers';
+import '../styles/dashboard.css';
+
+export default function Dashboard() {
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+
+  const [loading, setLoading] = useState(true);
+  const [kpis, setKpis] = useState({
+    activeQuotesCount: 0,
+    pendingQuotesValue: 0,
+    unpaidInvoicesCount: 0,
+    unpaidInvoicesValue: 0,
+    labourCount: 0,
+    lowStockCount: 0,
+  });
+  const [recentQuotes, setRecentQuotes] = useState([]);
+  const [recentInvoices, setRecentInvoices] = useState([]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      // 1. Get Pending/Sent Quotations
+      const { data: quotes } = await supabase
+        .from('quotations')
+        .select('total_amount, status');
+
+      const pendingQuotes = (quotes || []).filter(q => q.status === 'Pending' || q.status === 'Sent');
+      const pendingQuotesVal = pendingQuotes.reduce((acc, q) => acc + (parseFloat(q.total_amount) || 0), 0);
+
+      // 2. Get Unpaid/Partially Paid Invoices
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('total_amount, amount_paid, status');
+
+      const unpaidInvoices = (invoices || []).filter(i => i.status === 'Unpaid' || i.status === 'Partially Paid');
+      const unpaidInvoicesVal = unpaidInvoices.reduce((acc, i) => {
+        const total = parseFloat(i.total_amount) || 0;
+        const paid = parseFloat(i.amount_paid) || 0;
+        return acc + (total - paid);
+      }, 0);
+
+      // 3. Get Labour count
+      const { count: labourCount } = await supabase
+        .from('labour_master')
+        .select('*', { count: 'exact', head: true });
+
+      // 4. Get Low Stock Inventory Items
+      const { data: inventory } = await supabase
+        .from('inventory_items')
+        .select('quantity_available, low_stock_threshold');
+
+      const lowStockCount = (inventory || []).filter(i => 
+        Number(i.quantity_available) < Number(i.low_stock_threshold)
+      ).length;
+
+      // 5. Get Recent 5 quotes
+      const { data: recentQ } = await supabase
+        .from('quotations')
+        .select('id, quotation_number, client_name, total_amount, status')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      // 6. Get Recent 5 invoices
+      const { data: recentI } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, client_name, total_amount, status')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      setKpis({
+        activeQuotesCount: pendingQuotes.length,
+        pendingQuotesValue: pendingQuotesVal,
+        unpaidInvoicesCount: unpaidInvoices.length,
+        unpaidInvoicesValue: unpaidInvoicesVal,
+        labourCount: labourCount || 0,
+        lowStockCount: lowStockCount || 0
+      });
+
+      setRecentQuotes(recentQ || []);
+      setRecentInvoices(recentI || []);
+
+    } catch (err) {
+      console.error('Error fetching dashboard details:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'Approved':
+      case 'Paid':
+        return <span className="badge badge-success">{status}</span>;
+      case 'Pending':
+      case 'Sent':
+      case 'Partially Paid':
+        return <span className="badge badge-warning">{status}</span>;
+      case 'Overdue':
+      case 'Rejected':
+        return <span className="badge badge-danger">{status}</span>;
+      default:
+        return <span className="badge badge-neutral">{status}</span>;
+    }
+  };
+
+  return (
+    <div className="app-container">
+      <Sidebar />
+      
+      <div className="main-content">
+        <Header title="Dashboard" />
+        
+        <main className="gs-main">
+          {/* Header Row */}
+          <div className="db-section-header animate-fade">
+            <div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--primary)' }}>
+                Welcome back, {profile?.full_name || 'Admin'}
+              </h2>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                Here is what's happening with Mauli Decorators today.
+              </p>
+            </div>
+            
+            <button className="btn-secondary" onClick={fetchDashboardData} disabled={loading}>
+              <RefreshCw size={14} className={loading ? 'db-spin' : ''} />
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          {loading ? (
+            <div style={{ display: 'flex', minHeight: '300px', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                <Loader2 size={36} className="db-spin" style={{ color: 'var(--accent)', animation: 'spin 1s linear infinite' }} />
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontFamily: 'Outfit' }}>Fetching database status...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="animate-fade">
+              {/* KPI Cards Grid */}
+              <div className="db-grid">
+                
+                {/* Pending Quotes Value */}
+                <div className="db-kpi-card">
+                  <div className="db-kpi-icon">
+                    <FileText size={20} />
+                  </div>
+                  <div className="db-kpi-content">
+                    <span className="db-kpi-value">{formatCurrency(kpis.pendingQuotesValue)}</span>
+                    <span className="db-kpi-label">Pending Quotations ({kpis.activeQuotesCount})</span>
+                  </div>
+                </div>
+
+                {/* Unpaid Invoices Value */}
+                <div className="db-kpi-card" style={{ borderColor: 'rgba(212, 168, 71, 0.4)' }}>
+                  <div className="db-kpi-icon" style={{ backgroundColor: 'rgba(212, 168, 71, 0.1)' }}>
+                    <Landmark size={20} style={{ color: 'var(--accent)' }} />
+                  </div>
+                  <div className="db-kpi-content">
+                    <span className="db-kpi-value">{formatCurrency(kpis.unpaidInvoicesValue)}</span>
+                    <span className="db-kpi-label">Receivables ({kpis.unpaidInvoicesCount} Invoices)</span>
+                  </div>
+                </div>
+
+                {/* Labour Directory Count */}
+                <div className="db-kpi-card">
+                  <div className="db-kpi-icon">
+                    <Users size={20} />
+                  </div>
+                  <div className="db-kpi-content">
+                    <span className="db-kpi-value">{kpis.labourCount}</span>
+                    <span className="db-kpi-label">Registered Labour</span>
+                  </div>
+                </div>
+
+                {/* Low Stock Items */}
+                <div className="db-kpi-card" style={{ borderLeftColor: kpis.lowStockCount > 0 ? '#ef4444' : 'var(--accent)' }}>
+                  <div className="db-kpi-icon" style={{ backgroundColor: kpis.lowStockCount > 0 ? '#fee2e2' : 'var(--primary-subtle)' }}>
+                    <Package size={20} style={{ color: kpis.lowStockCount > 0 ? '#ef4444' : 'var(--primary)' }} />
+                  </div>
+                  <div className="db-kpi-content">
+                    <span className="db-kpi-value" style={{ color: kpis.lowStockCount > 0 ? '#ef4444' : 'var(--primary)' }}>
+                      {kpis.lowStockCount}
+                    </span>
+                    <span className="db-kpi-label">Low Stock items</span>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Lists Section */}
+              <div className="db-row">
+                
+                {/* Recent Quotations */}
+                <div className="glass-card">
+                  <div className="db-section-header">
+                    <h3 className="db-section-title">Recent Quotations</h3>
+                    <button className="btn-secondary" onClick={() => navigate('/quotations')} style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem' }}>
+                      <span>View All</span>
+                      <ArrowRight size={12} />
+                    </button>
+                  </div>
+
+                  {recentQuotes.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                      No quotations found.
+                    </div>
+                  ) : (
+                    <div className="recent-list">
+                      {recentQuotes.map(q => (
+                        <div key={q.id} className="recent-item" onClick={() => navigate('/quotations')}>
+                          <div className="recent-info">
+                            <span className="recent-title">Quote #{q.quotation_number}</span>
+                            <span className="recent-subtitle">{q.client_name}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            {getStatusBadge(q.status)}
+                            <span className="recent-amount">{formatCurrency(q.total_amount)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent Invoices */}
+                <div className="glass-card">
+                  <div className="db-section-header">
+                    <h3 className="db-section-title">Recent Invoices</h3>
+                    <button className="btn-secondary" onClick={() => navigate('/invoices')} style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem' }}>
+                      <span>View All</span>
+                      <ArrowRight size={12} />
+                    </button>
+                  </div>
+
+                  {recentInvoices.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                      No invoices found.
+                    </div>
+                  ) : (
+                    <div className="recent-list">
+                      {recentInvoices.map(i => (
+                        <div key={i.id} className="recent-item" onClick={() => navigate('/invoices')}>
+                          <div className="recent-info">
+                            <span className="recent-title">Invoice #{i.invoice_number}</span>
+                            <span className="recent-subtitle">{i.client_name}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            {getStatusBadge(i.status)}
+                            <span className="recent-amount">{formatCurrency(i.total_amount)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+      <style>{`
+        .db-spin {
+          animation: spin 1s linear infinite;
+        }
+      `}</style>
+    </div>
+  );
+}

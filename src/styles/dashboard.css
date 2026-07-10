@@ -1,0 +1,133 @@
+.db-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.db-kpi-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.db-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background-color: var(--accent);
+}
+
+.db-kpi-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background-color: var(--primary-subtle);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.db-kpi-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.db-kpi-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.db-kpi-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Charts and Lists Layout */
+.db-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+@media (max-width: 1024px) {
+  .db-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.db-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.db-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Recent items */
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: white;
+  transition: var(--transition);
+}
+
+.recent-item:hover {
+  border-color: var(--accent);
+  background-color: var(--primary-subtle);
+}
+
+.recent-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.recent-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.recent-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.recent-amount {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary);
+}

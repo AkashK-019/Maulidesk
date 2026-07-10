@@ -1,0 +1,166 @@
+/* ============================================================
+   inventory.css
+   Styles for the simplified Inventory page: summary cards,
+   free-text category pills, and a clean stock table.
+   ============================================================ */
+
+/* ---------- Summary cards ---------- */
+.inv-summary-scope {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.inv-summary-scope strong {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.inv-summary-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.inv-summary-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.inv-summary-card:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.inv-summary-card .num {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: block;
+  line-height: 1.2;
+}
+
+.inv-summary-card .lbl {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.inv-summary-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.inv-summary-icon.items {
+  background: rgba(212, 168, 71, 0.14);
+  color: #92720f;
+}
+
+.inv-summary-icon.categories {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+.inv-summary-icon.stock {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.inv-summary-icon.value {
+  background: rgba(139, 92, 246, 0.12);
+  color: #7c3aed;
+}
+
+/* ---------- Toolbar ---------- */
+.inv-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.inv-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
+  min-width: 240px;
+  flex: 1;
+  max-width: 320px;
+}
+
+.inv-search-box input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.inv-filter-pills {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.inv-filter-pill {
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.inv-filter-pill:hover {
+  border-color: var(--accent);
+  color: var(--primary);
+}
+
+.inv-filter-pill.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+/* ---------- Table wrapper ---------- */
+.inv-table-wrap {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.inv-table-wrap table {
+  width: 100%;
+}
+
+.inv-table-wrap tbody tr {
+  transition: background 0.12s ease;
+}
+
+.inv-table-wrap tbody tr:hover {
+  background: #faf9f6;
+}

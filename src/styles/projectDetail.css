@@ -1,0 +1,755 @@
+/* ═══════════════════════════════
+   PROJECT DETAIL PAGE STYLES
+   src/styles/projectDetail.css
+
+   Responsive strategy: container queries, not viewport
+   breakpoints. Every section below reflows based on the
+   width of its own panel (.pd-cq), which stays accurate
+   whether the sidebar is expanded, collapsed, or the
+   screen is a phone — a plain @media breakpoint can't
+   tell those apart, a container query can.
+═══════════════════════════════ */
+
+/* ── Header ── */
+.pd-header {
+  container-type: inline-size;
+  container-name: pd-header;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 14px;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  margin-bottom: clamp(1rem, 2.5vw, 1.25rem);
+}
+
+.pd-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.pd-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  transition: all 0.18s;
+  flex-shrink: 0;
+}
+.pd-back-btn:hover {
+  background: var(--surface, #f8fafc);
+  color: var(--text-primary, #1e293b);
+}
+
+.pd-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.pd-edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.pd-edit-btn:hover {
+  background: rgba(232,116,28,0.08);
+  border-color: rgba(232,116,28,0.3);
+  color: #e8741c;
+}
+
+.pd-project-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.pd-project-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #e8741c22, #e8741c44);
+  color: #e8741c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pd-project-name {
+  font-size: clamp(1.05rem, 1.4vw + 0.7rem, 1.25rem);
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  margin: 0 0 0.35rem 0;
+  overflow-wrap: break-word;
+}
+
+.pd-project-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 0.9rem;
+  font-size: 0.8rem;
+  color: var(--text-muted, #64748b);
+}
+.pd-project-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* Header narrows: stack actions under the back button, let status pill grow */
+@container pd-header (max-width: 460px) {
+  .pd-header-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pd-header-actions {
+    justify-content: space-between;
+  }
+  .prj-status-pill {
+    flex: 1;
+  }
+  .pd-edit-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* ── Status pill — scoped override for this page only.
+   A plain <select> can't be restyled much across browsers,
+   so we hide the native chrome and paint a CSS-only chevron
+   in the same color as the status, instead of leaving the
+   browser's default grey dropdown arrow sitting on top of it. ── */
+.pd-status-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  padding: 0.4rem 2.1rem 0.4rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 17px) center,
+    calc(100% - 12px) center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: box-shadow 0.15s ease, transform 0.1s ease;
+}
+.pd-status-select:hover {
+  box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+}
+.pd-status-select:active {
+  transform: scale(0.97);
+}
+.pd-status-select:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* ── Tabs — horizontally scrolling strip, never stacked ── */
+.pd-tabs-scroll {
+  position: relative;
+  margin-bottom: clamp(1rem, 2.5vw, 1.25rem);
+}
+
+.pd-tabs {
+  container-type: inline-size;
+  container-name: pd-tabbar;
+  display: flex;
+  gap: 4px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 4px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.pd-tabs::-webkit-scrollbar { display: none; }
+
+.pd-tab-btn {
+  flex: 1 1 0;
+  min-width: max-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted, #64748b);
+  font-size: 0.83rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  scroll-snap-align: start;
+  white-space: nowrap;
+}
+.pd-tab-btn:hover {
+  background: var(--surface, #f8fafc);
+  color: var(--text-primary, #1e293b);
+}
+.pd-tab-btn.active {
+  background: #e8741c;
+  color: #ffffff;
+  font-weight: 700;
+  border: 1px solid #e8741c;
+  box-shadow: 0 4px 12px rgba(232,116,28,0.32);
+  transform: translateY(-1px);
+}
+.pd-tab-btn.active:hover {
+  background: #d9680f;
+  color: #ffffff;
+}
+.pd-tab-btn.active .pd-tab-count {
+  background: rgba(255,255,255,0.28);
+  color: #ffffff;
+}
+
+.pd-tab-count {
+  background: rgba(232,116,28,0.15);
+  color: #e8741c;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  min-width: 18px;
+  text-align: center;
+}
+.pd-tab-btn:not(.active) .pd-tab-count {
+  background: var(--surface, #f1f5f9);
+  color: var(--text-muted, #94a3b8);
+}
+
+/* Once the tab strip can't fit three equal-width tabs comfortably,
+   let each tab size to its content and scroll instead of squeezing text */
+@container pd-tabbar (max-width: 420px) {
+  .pd-tab-btn {
+    flex: 0 0 auto;
+    padding: 0.6rem 0.85rem;
+  }
+}
+
+/* Edge fade so it's visually obvious the strip scrolls */
+.pd-tabs-scroll::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  right: 0;
+  width: 28px;
+  border-radius: 0 12px 12px 0;
+  background: linear-gradient(to right, transparent, var(--card-bg, #fff));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+@container pd-tabbar (max-width: 420px) {
+  .pd-tabs-scroll::after { opacity: 1; }
+}
+
+/* ── Tab Content wrapper — this is the container-query anchor
+      for everything rendered inside a tab panel ── */
+.pd-tab-content {
+  container-type: inline-size;
+  container-name: pd-panel;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 2vw, 1rem);
+  min-width: 0;
+}
+
+/* ── Section bar (title + actions row) ── */
+.pd-section-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: clamp(0.85rem, 2.5vw, 1rem) clamp(1rem, 3vw, 1.25rem);
+}
+
+.pd-section-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.97rem;
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  margin: 0 0 6px 0;
+}
+
+.pd-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+/* ── Action buttons (Print / PDF / WhatsApp) ── */
+.pd-action-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pd-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--surface, #f8fafc);
+  color: var(--text-secondary, #475569);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.pd-action-btn:hover { background: #f1f5f9; color: var(--text-primary, #1e293b); }
+.pd-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.pd-action-btn.pdf { border-color: rgba(37,99,235,0.3); color: #2563eb; }
+.pd-action-btn.pdf:hover { background: rgba(37,99,235,0.06); }
+.pd-action-btn.wa { border-color: rgba(16,185,129,0.3); color: #059669; }
+.pd-action-btn.wa:hover { background: rgba(16,185,129,0.06); }
+
+/* Panel too narrow for icon + label buttons: collapse to icon-only,
+   the title (title="Print" etc.) still gives a tooltip / a11y name */
+@container pd-panel (max-width: 380px) {
+  .pd-action-btn span { display: none; }
+  .pd-action-btn {
+    padding: 0.5rem;
+    width: 34px;
+    height: 34px;
+    justify-content: center;
+  }
+}
+
+/* ── Info grid (3 cards) — fluid, not a fixed breakpoint ── */
+.pd-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 0.75rem;
+}
+
+.pd-info-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  min-width: 0;
+}
+
+.pd-info-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted, #94a3b8);
+  margin: 0 0 6px 0;
+}
+.pd-info-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  margin: 0 0 5px 0;
+  overflow-wrap: break-word;
+}
+.pd-info-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+  margin: 3px 0;
+  overflow-wrap: anywhere;
+}
+.pd-info-meta svg { flex-shrink: 0; margin-top: 2px; }
+
+.pd-amount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  padding: 3px 0;
+  color: var(--text-secondary, #475569);
+  border-bottom: 1px dashed rgba(0,0,0,0.06);
+  gap: 0.5rem;
+}
+.pd-amount-row strong { color: var(--text-primary, #1e293b); }
+.pd-amount-row.grand {
+  border-top: 1.5px solid var(--border-color, #e5e7eb);
+  border-bottom: none;
+  margin-top: 4px;
+  padding-top: 6px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text-primary, #1e293b);
+}
+
+/* ── Items table — becomes a stack of labeled rows in a narrow
+      panel instead of squeezing a 7-column table or forcing
+      the whole page to scroll sideways ── */
+.pd-items-table-wrap {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.pd-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.pd-items-table th {
+  background: var(--surface, #f8fafc);
+  color: var(--text-muted, #64748b);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+.pd-items-table td {
+  padding: 0.65rem 0.9rem;
+  color: var(--text-secondary, #475569);
+  border-bottom: 1px solid var(--border-color, #f1f5f9);
+  vertical-align: top;
+}
+.pd-items-table tbody tr:last-child td { border-bottom: none; }
+.pd-items-table tbody tr:hover td { background: var(--surface, #fafafa); }
+.pd-items-table tfoot td { background: var(--surface, #f8fafc); border-top: 1.5px solid var(--border-color, #e5e7eb); }
+
+.pd-item-name {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+}
+.pd-item-desc {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted, #94a3b8);
+  margin-top: 2px;
+}
+
+@container pd-panel (max-width: 520px) {
+  .pd-items-table thead { display: none; }
+  .pd-items-table, .pd-items-table tbody, .pd-items-table tfoot {
+    display: block;
+    width: 100%;
+  }
+  .pd-items-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem 0.75rem;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--border-color, #f1f5f9);
+  }
+  .pd-items-table tbody tr:last-child { border-bottom: none; }
+
+  .pd-items-table td {
+    display: block;
+    padding: 0;
+    border: none;
+    font-size: 0.83rem;
+    color: var(--text-primary, #1e293b);
+  }
+
+  /* Numbered index badge — not useful as its own card row, drop it */
+  .pd-items-table td.pd-item-idx { display: none; }
+
+  /* Item/receipt title cell becomes the card header: full width, no label */
+  .pd-items-table td.pd-item-cell {
+    grid-column: 1 / -1;
+    padding-bottom: 0.6rem;
+    margin-bottom: 0.15rem;
+    border-bottom: 1px dashed var(--border-color, #e5e7eb);
+  }
+  .pd-items-table td.pd-item-cell .pd-item-name { font-size: 0.92rem; }
+
+  /* Every other data cell gets a small uppercase label above its value */
+  .pd-items-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted, #94a3b8);
+    margin-bottom: 3px;
+  }
+
+  /* Amount is the payoff of the card — full width, larger, emphasized */
+  .pd-items-table td.pd-item-amount {
+    grid-column: 1 / -1;
+    text-align: left !important;
+    margin-top: 0.15rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  /* Action (e.g. print button) spans full width, right-aligned */
+  .pd-items-table td.pd-item-action {
+    grid-column: 1 / -1;
+    display: flex !important;
+    justify-content: flex-end;
+  }
+  .pd-items-table td.pd-item-action::before { content: none; }
+  .pd-items-table td.pd-item-action .pd-action-btn {
+    width: auto;
+    height: auto;
+    padding: 0.4rem 0.9rem;
+  }
+  .pd-items-table td.pd-item-action .pd-action-btn span { display: inline; }
+
+  /* Footer summary row (e.g. "Total Received") reads as a clean label/value line */
+  .pd-items-table tfoot tr.pd-table-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    background: var(--surface, #f8fafc);
+  }
+  .pd-items-table tfoot td {
+    display: block;
+    padding: 0 !important;
+    border: none !important;
+  }
+}
+
+/* ── Notes box ── */
+.pd-notes-box {
+  background: rgba(248,250,252,0.8);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 10px;
+  padding: 0.85rem 1.1rem;
+}
+.pd-notes-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #94a3b8);
+  margin: 0 0 5px 0;
+}
+.pd-notes-text {
+  font-size: 0.83rem;
+  color: var(--text-secondary, #475569);
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+
+/* ── Progress banner ── */
+.pd-paid-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: 10px;
+  padding: 0.7rem 1.1rem;
+  color: #059669;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.pd-progress-banner {
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 10px;
+  padding: 0.85rem 1.1rem;
+}
+.pd-progress-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-muted, #64748b);
+  margin-bottom: 6px;
+  gap: 0.5rem;
+}
+.pd-progress-pct { font-weight: 600; color: #f59e0b; white-space: nowrap; }
+.pd-progress-bar-bg {
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.pd-progress-bar-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.4s;
+}
+.pd-progress-nums {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+
+/* ── Payment KPIs — fluid grid, no fixed 3-column breakpoint jump ── */
+.pd-pay-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: 0.75rem;
+}
+.pd-pay-kpi {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.pd-pay-kpi span { font-size: 0.72rem; color: var(--text-muted, #94a3b8); text-transform: uppercase; letter-spacing: 0.05em; }
+.pd-pay-kpi strong { font-size: 1.1rem; font-weight: 700; color: var(--text-primary, #1e293b); overflow-wrap: break-word; }
+.pd-pay-kpi.green { border-color: rgba(16,185,129,0.25); }
+.pd-pay-kpi.green strong { color: #10b981; }
+.pd-pay-kpi.red { border-color: rgba(239,68,68,0.25); }
+.pd-pay-kpi.red strong { color: #ef4444; }
+
+.pd-pay-progress-wrap {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 0.85rem 1.1rem;
+}
+
+/* ── Receipt & mode badges ── */
+.pd-rcpt-label {
+  display: inline-block;
+  background: rgba(232,116,28,0.1);
+  color: #e8741c;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+}
+.pd-mode-badge {
+  display: inline-block;
+  background: var(--surface, #f1f5f9);
+  color: var(--text-secondary, #475569);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+}
+
+/* ── Spin animation ── */
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ── Bottom-sheet modal (this page only, via .pd-modal) ──
+   On a roomy screen it behaves like a normal centered dialog.
+   Once height is tight (a phone), it becomes a sheet anchored
+   to the bottom with a drag handle, which is easier to reach
+   and dismiss one-handed than a floating centered box. ── */
+.pd-modal {
+  max-width: 560px;
+}
+
+@media (max-width: 640px), (max-height: 700px) {
+  .modal-overlay:has(.pd-modal) {
+    align-items: flex-end;
+  }
+  .pd-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 88dvh;
+    border-radius: 20px 20px 0 0;
+    animation: pd-sheet-up 0.25s ease-out;
+  }
+  .pd-modal .modal-header {
+    position: relative;
+    padding-top: 1.5rem;
+  }
+  .pd-modal .modal-header::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--border-color, #e5e7eb);
+  }
+  .pd-modal .modal-body {
+    max-height: calc(88dvh - 130px);
+    overflow-y: auto;
+  }
+  .pd-modal .modal-footer {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+  .pd-modal .modal-footer button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@keyframes pd-sheet-up {
+  from { transform: translateY(24px); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-modal { animation: none; }
+}
+
+/* ── Fallback for browsers without container query support ──
+   (progressive enhancement — the layout still works, just
+   reflows at viewport width instead of panel width) ── */
+@supports not (container-type: inline-size) {
+  @media (max-width: 640px) {
+    .pd-pay-kpis { grid-template-columns: 1fr; }
+    .pd-info-grid { grid-template-columns: 1fr; }
+    .pd-action-group { width: 100%; }
+    .pd-action-btn span { display: none; }
+  }
+}
