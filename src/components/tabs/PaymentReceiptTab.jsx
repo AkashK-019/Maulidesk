@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import { supabase } from '../../supabase';
+import html2pdf from 'html2pdf.js';
+import '../../styles/quotations.css';
 
 const PAYMENT_MODES = ['Cash', 'UPI', 'Bank Transfer', 'Cheque', 'Card'];
 
@@ -72,7 +74,16 @@ const genReceiptNumber = async () => {
   return `${prefix}001`;
 };
 
-const buildReceiptHTML = (receipt, invoice, company, project) => {
+/* ─── Build the printable/exportable receipt document ───
+   Mirrors buildQuotationDocHTML() in Quotations.jsx: render the receipt
+   into an offscreen sandbox first, measure whether it overflows one A4
+   page, and only split into a continuation page for the summary/
+   signature block if it doesn't fit (e.g. unusually long notes). Returns
+   an HTML *fragment* (no <html>/<head>/<style>) that relies on the
+   shared '../../styles/quotations.css' .qtp-* classes already being
+   loaded on the page — the exact same design system the Quotation and
+   Tax Invoice documents use, so receipts match them pixel-for-pixel. */
+const buildReceiptDocHTML = async (receipt, invoice, company, project) => {
   const total    = Number(invoice.total_amount || 0);
   const received = Number(receipt.amount || 0);
   const prevPaid = Number(invoice.amount_paid || 0) - received; // paid before THIS receipt
@@ -90,7 +101,7 @@ const buildReceiptHTML = (receipt, invoice, company, project) => {
 
   const amountInWords = numToWords(received);
 
-  /* ── Brand lockup (same logic as quotation header) ── */
+  /* ── Brand lockup (identical logic to the quotation header) ── */
   const nameParts = (company.name || '').trim().split(' ');
   const brandRest = nameParts.slice(1).join(' ');
   const isMauli = nameParts[0]?.toLowerCase() === 'mauli';
@@ -98,10 +109,41 @@ const buildReceiptHTML = (receipt, invoice, company, project) => {
     ? `<img src="${MAULI_LOGO_DATA_URI}" alt="${nameParts[0]}" class="qtp-brand-logo-img"/>`
     : `<span class="qtp-brand-marathi">${nameParts[0] || company.name || ''}</span>`;
 
-  const metaRows = `
-    <tr><td class="qtp-meta-key">Receipt No.</td><td class="qtp-meta-val"><strong>${receipt.receipt_number || '—'}</strong></td></tr>
-    <tr><td class="qtp-meta-key">Date</td><td class="qtp-meta-val"><strong>${dateStr}</strong></td></tr>
-    ${company.gstNumber ? `<tr><td class="qtp-meta-key">GST No.</td><td class="qtp-meta-val"><strong>${company.gstNumber}</strong></td></tr>` : ''}`;
+  const pageHeaderFinal = (pageNum, totalPages) => `
+    <div class="qtp-header">
+      <div class="qtp-brand-block">
+        <div class="qtp-brand-text">
+          <div class="qtp-brand-name-wrap">
+            <div class="qtp-brand-lockup">
+              ${brandMarkHTML}
+              ${brandRest ? `<span class="qtp-brand-english">${brandRest}</span>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="qtp-header-right">
+        <div class="qtp-doc-title">RECEIPT</div>
+        <table class="qtp-meta-table">
+          <tr><td class="qtp-meta-key">Receipt No.</td><td class="qtp-meta-val"><strong>${receipt.receipt_number || '—'}</strong></td></tr>
+          <tr><td class="qtp-meta-key">Date</td><td class="qtp-meta-val"><strong>${dateStr}</strong></td></tr>
+          ${company.gstNumber ? `<tr><td class="qtp-meta-key">GST No.</td><td class="qtp-meta-val"><strong>${company.gstNumber}</strong></td></tr>` : ''}
+          ${totalPages > 1 ? `<tr><td class="qtp-meta-key">Page</td><td class="qtp-meta-val"><strong>${pageNum} / ${totalPages}</strong></td></tr>` : ''}
+        </table>
+      </div>
+    </div>`;
+
+  const pageFooterHTML = `
+    <div class="qtp-page-footer">
+      <div class="qtp-footer-addr-row">
+        <span class="qtp-footer-sep">·</span>
+        <span>${company.address || ''}</span>
+      </div>
+      <div class="qtp-footer-contact-row">
+        ${company.phone ? `<span> ${company.phone}</span><span class="qtp-footer-sep">·</span>` : ''}
+        ${company.email ? `<span> ${company.email}</span><span class="qtp-footer-sep">·</span>` : ''}
+        ${company.gstNumber ? `<span>GST: ${company.gstNumber}</span>` : ''}
+      </div>
+    </div>`;
 
   /* ── Info band: Received From / Invoice Reference ── */
   const infoBandHTML = `
@@ -121,10 +163,9 @@ const buildReceiptHTML = (receipt, invoice, company, project) => {
     </div>
   </div>`;
 
-  /* ── Payment details table (styled like quotation items table) ── */
+  /* ── Payment details table (styled like the quotation items table) ── */
   const paymentTableHTML = `
-  <div class="qtp-financials">
-    <div class="qtp-section-head">Payment Details</div>
+  <div class="qtp-financials"><div class="qtp-section-head" style="margin-bottom:12px">Payment Details</div>
     <table class="qtp-items-print-table">
       <thead>
         <tr>
@@ -148,10 +189,25 @@ const buildReceiptHTML = (receipt, invoice, company, project) => {
   </div>`;
 
   /* ── Summary: amount in words + signature (left) · totals (right) ── */
-  const summaryHTML = `
+  const summaryTopHTML = `
   <div class="qtp-summary-row">
     <div class="qtp-summary-left">
       <div class="qtp-totals-words">Amount in Words: <strong>${amountInWords}</strong></div>
+    </div>
+    <div class="qtp-summary-right">
+      <table class="qtp-totals-table">
+        <tbody>
+          <tr><td class="qtp-totals-label">Invoice Total</td><td class="qtp-totals-value">${inr(total)}</td></tr>
+          <tr><td class="qtp-totals-label">Previously Paid</td><td class="qtp-totals-value">${inr(prevPaid)}</td></tr>
+          <tr class="qtp-totals-grand-row" style="background:#fff;color:#0f172a;"><td class="qtp-totals-label" style="background:#fff;color:#0f172a;font-weight:700;">Amount Received</td><td class="qtp-totals-value" style="background:#fff;color:#0f172a;font-weight:700;">${inr(received)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+
+  const summaryBottomHTML = `
+  <div class="qtp-summary-row" style="display:flex;align-items:flex-end;">
+    <div class="qtp-summary-left">
       <div class="qtp-summary-left-terms">
         <div class="qtp-terms-section">
           <div class="qtp-terms-head">Payment Received Against</div>
@@ -167,15 +223,7 @@ const buildReceiptHTML = (receipt, invoice, company, project) => {
         </div>` : ''}
       </div>
     </div>
-    <div class="qtp-summary-right">
-      <table class="qtp-totals-table">
-        <tbody>
-          <tr><td class="qtp-totals-label">Invoice Total</td><td class="qtp-totals-value">${inr(total)}</td></tr>
-          <tr><td class="qtp-totals-label">Previously Paid</td><td class="qtp-totals-value">${inr(prevPaid)}</td></tr>
-          <tr class="qtp-totals-grand-row"><td class="qtp-totals-label">Amount Received</td><td class="qtp-totals-value">${inr(received)}</td></tr>
-          <tr><td class="qtp-totals-label">Balance Due</td><td class="qtp-totals-value">${inr(balance)}</td></tr>
-        </tbody>
-      </table>
+    <div class="qtp-summary-right" style="align-self:flex-end;">
       <div class="qtp-sig-block">
         <div class="qtp-sig-bottom">
           <div class="qtp-sig-line"></div>
@@ -188,183 +236,228 @@ const buildReceiptHTML = (receipt, invoice, company, project) => {
     </div>
   </div>`;
 
+  const paidTillNow = Number(invoice.amount_paid || 0);
+  const statusLine = balance <= 0.01
+    ? `Invoice Paid: <strong>${inr(paidTillNow)}</strong> &nbsp;·&nbsp; Fully Settled`
+    : `Invoice Paid: <strong>${inr(paidTillNow)}</strong> &nbsp;·&nbsp; Remaining: <strong>${inr(balance)}</strong>`;
+
+  // Swap this string for whatever closing line you'd like on the receipt.
+  const thankYouLine = `Thank you!`;
+
   const thankStripHTML = `
-  <div class="qtp-validity-strip">
-    ${balance <= 0.01
-      ? `Invoice <strong>fully paid</strong>. Thank you for your business!`
-      : `Thank you for your payment. Outstanding balance: <strong>${inr(balance)}</strong>.`}
+  <div class="qtp-validity-strip" style="display:flex;flex-direction:column;gap:4px;text-align:center;">
+    <div class="qtp-validity-row qtp-validity-row-status">${statusLine}</div>
+    <div class="qtp-validity-row qtp-validity-row-thanks">${thankYouLine}</div>
   </div>`;
 
-  const footerHTML = `
-  <div class="qtp-page-footer">
-    <div class="qtp-footer-addr-row">
-      <span class="qtp-footer-sep">·</span>
-      <span>${company.address || ''}</span>
-    </div>
-    <div class="qtp-footer-contact-row">
-      ${company.phone ? `<span> ${company.phone}</span><span class="qtp-footer-sep">·</span>` : ''}
-      ${company.email ? `<span> ${company.email}</span><span class="qtp-footer-sep">·</span>` : ''}
-      ${company.gstNumber ? `<span>GST: ${company.gstNumber}</span>` : ''}
-    </div>
-  </div>`;
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8"/>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@400;500;600;700;800&family=Tangerine:wght@400;700&family=Tillana:wght@700&family=Yatra+One&display=swap" rel="stylesheet">
-<style>
-  * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  html, body { margin: 0; padding: 0; background: #fff; }
-  @page { size: A4 portrait; margin: 0; }
-
-  .qt-print-doc {
-    font-family: 'Inter', Arial, sans-serif;
-    color: #1f2937; font-size: 12.5pt;
-    width: 210mm; min-height: 297mm;
-    margin: 0 auto; padding: 0; background: #fff;
-    position: relative; display: flex; flex-direction: column; overflow: hidden;
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (_) { /* ignore */ }
   }
 
-  /* Header */
-  .qtp-header { padding: 14px 24px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3.5px solid #2E2E2E; background: #fff; flex-shrink: 0; }
-  .qtp-brand-block { display: flex; align-items: center; gap: 14px; }
-  .qtp-brand-lockup { position: relative; display: inline-block; }
-  .qtp-brand-logo-img { height: 105px; width: auto; display: block; }
-  .qtp-brand-marathi { font-family: 'Tillana', 'Yatra One', cursive; font-weight: 700; font-size: 30pt; color: #2E2E2E; }
-  .qtp-brand-english { position: absolute; right: -80px; bottom: -25px; font-family: 'Tangerine', cursive; font-weight: 700; font-size: 38pt; line-height: 1; color: #093f59; white-space: nowrap; text-shadow: 0.2px 0 #093f59, -0.2px 0 #093f59; }
-  .qtp-header-right { text-align: right; flex-shrink: 0; }
-  .qtp-doc-title { font-size: 22pt; font-weight: 800; letter-spacing: .1em; color: #2E2E2E; line-height: 1; margin-bottom: 10px; }
-  .qtp-meta-table { border-collapse: collapse; margin-left: auto; }
-  .qtp-meta-key { font-size: 9.5pt; font-weight: 500; color: #374151; padding: 3px 10px 3px 0; text-align: right; white-space: nowrap; }
-  .qtp-meta-val { font-size: 10.5pt; color: #111; padding: 3px 0; text-align: right; }
-  .qtp-meta-val strong { color: #2E2E2E; font-weight: 700; }
+  // Same offscreen-sandbox measurement technique as the quotation builder:
+  // render candidate content into a hidden div and check whether the last
+  // element's bottom edge falls past the printable page area.
+  const sandbox = document.createElement('div');
+  sandbox.style.cssText = 'position:fixed;top:0;left:-9999px;z-index:-1;visibility:hidden;pointer-events:none;';
+  document.body.appendChild(sandbox);
 
-  /* Info band */
-  .qtp-info-band { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1.5px solid #e2e8f0; }
-  .qtp-billed-col { padding: 14px 20px 14px 24px; border-right: 1px solid #e2e8f0; }
-  .qtp-project-col { padding: 14px 24px 14px 20px; }
-  .qtp-band-label { font-size: 8.5pt; font-weight: 800; color: #2E2E2E; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1.5px solid #2E2E2E; display: block; }
-  .qtp-billed-name { font-size: 14pt; font-weight: 800; color: #111; line-height: 1.25; }
-  .qtp-billed-addr { font-size: 10.5pt; color: #111; margin-top: 5px; line-height: 1.55; }
-  .qtp-billed-contact { font-size: 10.5pt; color: #111; margin-top: 4px; line-height: 1.5; display: flex; align-items: center; gap: 6px; }
-  .qtp-icon-phone { width: 11pt; height: 11pt; flex-shrink: 0; color: #0c5a7f; }
-  .qtp-billed-gst { font-size: 10.5pt; color: #111; margin-top: 6px; }
-  .qtp-proj-row { display: flex; gap: 10px; margin-bottom: 5px; align-items: baseline; }
-  .qtp-proj-key { font-size: 10pt; font-weight: 500; color: #374151; width: 100px; flex-shrink: 0; }
-  .qtp-proj-val { font-size: 11pt; color: #111; font-weight: 600; }
+  const overflowsOnePage = (bodyHTML, pageNum, totalGuess) => {
+    sandbox.innerHTML = `<div class="qt-print-doc">${pageHeaderFinal(pageNum, totalGuess)}<div class="qtp-page-body">${bodyHTML}</div>${pageFooterHTML}</div>`;
+    const pageBody = sandbox.querySelector('.qtp-page-body');
+    if (!pageBody || !pageBody.lastElementChild) return false;
+    const reservedBottom = parseFloat(window.getComputedStyle(pageBody).paddingBottom) || 0;
+    const safeBottom     = pageBody.getBoundingClientRect().top + pageBody.clientHeight - reservedBottom;
+    const contentBottom  = pageBody.lastElementChild.getBoundingClientRect().bottom;
+    return contentBottom > safeBottom + 1; // +1px tolerance for sub-pixel rounding
+  };
 
-  /* Body */
-  .qtp-page-body { flex: 1; display: flex; flex-direction: column; padding-bottom: 70px; }
+  // Top block flows normally from the header; the bottom block (amount
+  // in words, "Payment Received Against", bank details, totals and the
+  // signature) is pinned to the bottom of the page — touching the footer
+  // — with a flexible spacer soaking up whatever room is left above it,
+  // instead of sitting directly under the payment table with dead space
+  // below it.
+  const topBlockHTML    = `${infoBandHTML}${paymentTableHTML}${summaryTopHTML}`;
+  const bottomBlockHTML = `${summaryBottomHTML}${thankStripHTML}`;
+  const fullBodyHTML    = `${topBlockHTML}${bottomBlockHTML}`; // used only to measure overflow
 
-  .qtp-section-head { font-size: 10pt; font-weight: 800; color: #111; text-transform: uppercase; letter-spacing: .08em; padding-bottom: 5px; border-bottom: 2px solid #2E2E2E; display: block; margin-bottom: 8px; }
+  const pinBottomHTML = (topHTML, bottomHTML) => `
+    <div style="display:flex;flex-direction:column;height:100%;">
+      ${topHTML}
+      <div style="flex:1 1 auto;"></div>
+      ${bottomHTML}
+    </div>`;
 
-  .qtp-financials { padding: 14px 24px 0; flex-shrink: 0; }
-  .qtp-items-print-table { width: 100%; border-collapse: collapse; font-size: 11pt; margin-top: 8px; border: 1px solid #cbd5e1; }
-  .qtp-items-print-table th { background: #0c5a7f; color: #fff; padding: 10px 11px; font-size: 9.5pt; text-transform: uppercase; letter-spacing: .04em; text-align: left; box-shadow: inset -1px 0 0 0 rgba(255,255,255,.25); }
-  .qtp-items-print-table th:last-child { box-shadow: none; }
-  .qtp-items-print-table td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; box-shadow: inset -1px 0 0 0 #e2e8f0; color: #111; vertical-align: top; }
-  .qtp-items-print-table td:last-child { box-shadow: none; }
-  .qtp-items-print-table tr:last-child td { border-bottom: none; }
-  .col-sr { width: 40px; text-align: left; padding-left: 14px; }
-  .col-item { min-width: 150px; text-align: left; }
-  .col-qty { width: 110px; text-align: left; }
-  .col-rate { width: 120px; text-align: left; white-space: nowrap; }
-  .col-amt { width: 120px; text-align: left; font-weight: 600; color: #111; white-space: nowrap; }
-  .item-desc { font-size: 9.5pt; font-weight: 500; color: #374151; line-height: 1.45; margin-top: 3px; }
+  if (!overflowsOnePage(fullBodyHTML, 1, 1)) {
+    document.body.removeChild(sandbox);
+    return `<div class="qt-print-wrapper"><div class="qt-print-doc">
+      ${pageHeaderFinal(1, 1)}<div class="qtp-page-body">${pinBottomHTML(topBlockHTML, bottomBlockHTML)}</div>${pageFooterHTML}</div></div>`;
+  }
 
-  /* Summary */
-  .qtp-summary-row { display: flex; align-items: stretch; gap: 0; padding: 0 24px 14px 0; margin-top: 8px; }
-  .qtp-summary-left { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 16px 16px 0 24px; }
-  .qtp-summary-left-terms { display: flex; flex-direction: column; gap: 10px; }
-  .qtp-totals-words { font-size: 10.5pt; font-weight: 500; color: #374151; line-height: 1.55; text-align: left; }
-  .qtp-totals-words strong { font-weight: 700; color: #0c5a7f; }
-  .qtp-terms-section { display: flex; flex-direction: column; gap: 5px; }
-  .qtp-terms-head { font-size: 8.5pt; font-weight: 800; color: #111; text-transform: uppercase; letter-spacing: .12em; padding-bottom: 4px; border-bottom: 1.5px solid #2E2E2E; }
-  .qtp-tc-item { font-size: 10pt; font-weight: 500; color: #111; line-height: 1.5; }
+  // Rare fallback (e.g. very long notes push the summary off the page):
+  // split into an items page + a continuation page for the summary,
+  // exactly like the quotation builder's "extra tail page" behaviour.
+  // The continuation page still pins the summary/signature block to its
+  // footer, with the spacer taking up the empty space above it.
+  const page1Body = topBlockHTML;
+  document.body.removeChild(sandbox);
 
-  .qtp-summary-right { flex: 0 0 340px; width: 340px; margin-left: auto; display: flex; flex-direction: column; }
-  .qtp-totals-table { width: 100%; border-collapse: collapse; font-size: 11pt; border: 1px solid #dbe1e8; }
-  .qtp-totals-table td { padding: 9px 12px; border-bottom: 1px solid #eceff3; vertical-align: middle; }
-  .qtp-totals-label { text-align: left; font-weight: 600; color: #374151; border-right: 1px solid #dbe1e8; width: 50%; }
-  .qtp-totals-value { text-align: left; padding-left: 20px; }
-  .qtp-totals-grand-row td { background: #0c5a7f !important; color: #fff !important; font-size: 12.5pt; font-weight: 800; padding: 12px; border: none; }
-  .qtp-totals-grand-row .qtp-totals-label { text-align: left; color: #fff !important; border-right: none; box-shadow: inset -2px 0 0 0 rgba(255,255,255,.55); }
-  .qtp-totals-grand-row .qtp-totals-value { text-align: left; padding-left: 20px; }
-
-  .qtp-sig-block { width: 100%; padding-top: 26px; margin-top: auto; display: flex; flex-direction: column; align-items: center; text-align: center; }
-  .qtp-sig-bottom { display: flex; flex-direction: column; gap: 0; width: 100%; }
-  .qtp-sig-line { border-top: 1.5px solid #2E2E2E; }
-  .qtp-sig-label-row { display: flex; flex-direction: column; align-items: center; margin-top: 6px; gap: 3px; }
-  .qtp-sig-label { font-size: 9.5pt; font-weight: 700; color: #111; text-transform: uppercase; letter-spacing: .08em; }
-  .qtp-sig-company-name { font-family: 'Great Vibes', cursive; font-size: 22px; color: #222; line-height: 1; margin-top: 4px; text-align: center; }
-
-  /* Validity / thank-you strip */
-  .qtp-validity-strip { text-align: center; padding: 8px 24px; font-size: 9.5pt; font-weight: 500; color: #111; border-top: 1px solid #e2e8f0; background: #faf9f6; flex-shrink: 0; margin-top: auto; }
-  .qtp-validity-strip strong { color: #2E2E2E; font-weight: 700; }
-
-  /* Footer */
-  .qtp-page-footer { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 24px 14px; border-top: 1.5px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10.5pt; color: #374151; text-align: center; }
-  .qtp-footer-addr-row { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; color: #111; }
-  .qtp-footer-contact-row { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; color: #374151; font-size: 10pt; font-weight: 500; }
-  .qtp-footer-sep { color: #94a3b8; font-size: 11pt; }
-</style>
-</head>
-<body>
-  <div class="qt-print-doc">
-    <div class="qtp-header">
-      <div class="qtp-brand-block">
-        <div class="qtp-brand-lockup">
-          ${brandMarkHTML}
-          ${brandRest ? `<span class="qtp-brand-english">${brandRest}</span>` : ''}
-        </div>
-      </div>
-      <div class="qtp-header-right">
-        <div class="qtp-doc-title">RECEIPT</div>
-        <table class="qtp-meta-table">${metaRows}</table>
-      </div>
-    </div>
-
-    <div class="qtp-page-body">
-      ${infoBandHTML}
-      ${paymentTableHTML}
-      ${summaryHTML}
-      ${thankStripHTML}
-    </div>
-
-    ${footerHTML}
-  </div>
-</body>
-</html>`;
+  return `<div class="qt-print-wrapper">
+    <div class="qt-print-doc qtp-page-break">${pageHeaderFinal(1, 2)}<div class="qtp-page-body">${page1Body}</div>${pageFooterHTML}</div>
+    <div class="qt-print-doc">${pageHeaderFinal(2, 2)}<div class="qtp-page-body">${pinBottomHTML('', bottomBlockHTML)}</div>${pageFooterHTML}</div>
+  </div>`;
 };
 
-const printReceipt = (receipt, invoice, company, project) => {
-  const html = buildReceiptHTML(receipt, invoice, company, project);
-  const win = window.open('', '_blank');
-  if (!win) { alert('Please allow popups to print.'); return; }
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  // Wait a touch longer so the Google Fonts + logo finish loading before print
-  setTimeout(() => { win.print(); win.close(); }, 800);
+const waitForImages = (root) => Promise.all(
+  Array.from(root.querySelectorAll('img')).map(img => {
+    if (img.complete && img.naturalWidth > 0) {
+      return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+    }
+    return new Promise(resolve => {
+      img.onload  = () => (img.decode ? img.decode().then(resolve).catch(resolve) : resolve());
+      img.onerror = resolve;
+    });
+  })
+);
+
+// Same font/layout settle step used before the quotation is rasterized —
+// forces the custom webfonts (brand lockup + signature script) to finish
+// loading and gives the browser two animation frames to reflow with them,
+// so html2canvas never snapshots a half-laid-out page.
+const settleFontsAndLayout = async (root, doc = document, win = window) => {
+  const specs = ['700 38pt Tangerine', '700 1em Tillana', '700 1em "Yatra One"', '800 26pt Inter', '400 22px "Great Vibes"'];
+  try {
+    if (doc.fonts) await Promise.all(specs.map(spec => doc.fonts.load(spec).catch(() => {})));
+  } catch (_) { /* Font Loading API unsupported — ignore */ }
+  if (doc.fonts && doc.fonts.ready) {
+    try { await doc.fonts.ready; } catch (_) { /* ignore */ }
+  }
+  void root.offsetHeight;
+  const raf = win.requestAnimationFrame ? win.requestAnimationFrame.bind(win) : requestAnimationFrame;
+  await new Promise(r => raf(() => raf(r)));
 };
 
-// NOTE: there's no PDF-generation library wired up in this file, so
-// "download" opens the same print-ready document and leaves the actual
-// save-as-PDF step to the browser's print dialog (Print > Save as PDF).
-// Quotation/Invoice tabs call a shared downloadDocumentPDF() from
-// ../../utils/documentPrint — if that helper does something more direct
-// (e.g. a PDF lib), point this at the same function for consistency.
-const downloadReceiptPDF = (receipt, invoice, company, project) => {
-  const html = buildReceiptHTML(receipt, invoice, company, project);
-  const win = window.open('', '_blank');
-  if (!win) { alert('Please allow popups to download.'); return; }
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  setTimeout(() => { win.print(); }, 800);
+// Grabs the CSS already active on the page (quotations.css plus any
+// webfont <link>s) so the print iframe below can render identically
+// without needing print-only visibility/display rules of its own.
+const collectPageCSS = () => {
+  let cssText = '';
+  for (const sheet of Array.from(document.styleSheets)) {
+    try {
+      cssText += Array.from(sheet.cssRules).map(r => r.cssText).join('\n') + '\n';
+    } catch (_) {
+      // Cross-origin stylesheet (e.g. a Google Fonts <link>) — reading
+      // .cssRules throws a SecurityError, so re-import it by URL instead.
+      if (sheet.href) cssText += `@import url("${sheet.href}");\n`;
+    }
+  }
+  return cssText;
+};
+
+/* ─── Print ───
+   Prints from an isolated iframe document instead of hiding the rest of
+   the app behind print-only CSS (the classic `@media print { body * {
+   visibility:hidden } ... }` trick). That trick is the most common cause
+   of "blank page when printing" and is notoriously inconsistent between
+   Safari, Chrome and Edge. An isolated document sidesteps it completely —
+   nothing on the host page has to be hidden — and prints identically in
+   every modern browser. The page's own stylesheets are cloned in so the
+   receipt keeps its exact look. */
+const printReceiptDoc = async (receipt, invoice, company, project) => {
+  const bodyHTML = await buildReceiptDocHTML(receipt, invoice, company, project);
+  const pageCSS = collectPageCSS();
+
+  let iframe = document.getElementById('pr-print-frame');
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.id = 'pr-print-frame';
+    // IMPORTANT: must stay technically visible (not visibility:hidden /
+    // display:none) — Chrome and Edge silently print a blank page for a
+    // hidden iframe even though .print() is called on it. Push it off
+    // the visible viewport instead; zero width/height means it can't be
+    // seen or interacted with either way.
+    iframe.style.cssText = 'position:fixed;top:0;left:-10000px;width:0;height:0;border:0;';
+    document.body.appendChild(iframe);
+  }
+
+  const frameDoc = iframe.contentDocument || iframe.contentWindow.document;
+  frameDoc.open();
+  frameDoc.write(`<!DOCTYPE html><html><head><meta charset="utf-8" />
+    <style>
+      html, body { margin: 0; padding: 0; background: #fff; }
+      ${pageCSS}
+    </style>
+    <style>
+      /* Belt-and-braces: if quotations.css still carries a leftover
+         "hide everything except #pr-print-root" rule from an older
+         print approach, neutralize it here so it can't blank out this
+         isolated document too. */
+      html, body { visibility: visible !important; display: block !important; }
+      body * { visibility: visible !important; }
+    </style>
+  </head><body id="pr-print-root">${bodyHTML}</body></html>`);
+  frameDoc.close();
+
+  const frameWin = iframe.contentWindow;
+  await waitForImages(frameDoc.body);
+  await settleFontsAndLayout(frameDoc.body, frameDoc, frameWin);
+
+  // Safari in particular needs the iframe's window focused before
+  // print() — otherwise it can silently print the (blank) parent page.
+  frameWin.focus();
+  setTimeout(() => frameWin.print(), 100);
+
+  // Tidy up once the print dialog closes; harmless if a browser doesn't
+  // fire this on the iframe window.
+  frameWin.addEventListener?.('afterprint', () => {
+    iframe.remove();
+  }, { once: true });
+};
+
+/* ─── Download PDF ─── */
+const downloadReceiptPdfDoc = async (receipt, invoice, company, project) => {
+  let root = document.getElementById('pr-pdf-export-root');
+  if (!root) { root = document.createElement('div'); root.id = 'pr-pdf-export-root'; document.body.appendChild(root); }
+  root.style.width = root.style.minWidth = '794px';
+  root.innerHTML = await buildReceiptDocHTML(receipt, invoice, company, project);
+  await waitForImages(root);
+  await settleFontsAndLayout(root);
+  const pageDivs = Array.from(root.querySelectorAll('.qt-print-doc'));
+  pageDivs.forEach(d => { d.style.width = d.style.minWidth = '794px'; d.style.height = d.style.minHeight = d.style.maxHeight = '1122px'; d.style.overflow = 'hidden'; });
+  const filename = `Receipt-${receipt.receipt_number || receipt.id}.pdf`;
+  const opts = { margin: 0, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, windowWidth: 794, width: 794, height: 1122, letterRendering: true, imageTimeout: 0, logging: false }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+  try {
+    if (pageDivs.length === 1) { await html2pdf().set({ ...opts, filename }).from(pageDivs[0]).save(); }
+    else {
+      const w = html2pdf().set({ ...opts, filename });
+      await w.from(pageDivs[0]).toImg().toPdf();
+      const pdf = w.prop.pdf;
+      for (let i = 1; i < pageDivs.length; i++) { const w2 = html2pdf().set(opts); await w2.from(pageDivs[i]).toImg(); pdf.addPage(); pdf.addImage(w2.prop.img, 'JPEG', 0, 0, 210, 297); }
+      pdf.save(filename);
+    }
+  } catch (err) { alert('Failed to generate PDF: ' + err.message); }
+  finally { root.innerHTML = ''; root.style.width = root.style.minWidth = ''; }
+};
+
+/* ─── Build PDF blob (for native share) ─── */
+const buildReceiptPdfBlob = async (receipt, invoice, company, project) => {
+  let root = document.getElementById('pr-pdf-export-root');
+  if (!root) { root = document.createElement('div'); root.id = 'pr-pdf-export-root'; document.body.appendChild(root); }
+  root.style.width = root.style.minWidth = '794px';
+  root.innerHTML = await buildReceiptDocHTML(receipt, invoice, company, project);
+  await waitForImages(root);
+  await settleFontsAndLayout(root);
+  const pageDivs = Array.from(root.querySelectorAll('.qt-print-doc'));
+  pageDivs.forEach(d => { d.style.width = d.style.minWidth = '794px'; d.style.height = d.style.minHeight = d.style.maxHeight = '1122px'; d.style.overflow = 'hidden'; });
+  const filename = `Receipt-${receipt.receipt_number || receipt.id}.pdf`;
+  const opts = { margin: 0, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, windowWidth: 794, width: 794, height: 1122, letterRendering: true, imageTimeout: 0, logging: false }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+  try {
+    if (pageDivs.length === 1) { const blob = await html2pdf().set({ ...opts, filename }).from(pageDivs[0]).outputPdf('blob'); return { blob, filename }; }
+    const w = html2pdf().set(opts); await w.from(pageDivs[0]).toImg().toPdf();
+    const pdf = w.prop.pdf;
+    for (let i = 1; i < pageDivs.length; i++) { const w2 = html2pdf().set(opts); await w2.from(pageDivs[i]).toImg(); pdf.addPage(); pdf.addImage(w2.prop.img, 'JPEG', 0, 0, 210, 297); }
+    return { blob: pdf.output('blob'), filename };
+  } finally { root.innerHTML = ''; root.style.width = root.style.minWidth = ''; }
 };
 
 // Formats an Indian mobile number for a wa.me deep link: strips
@@ -376,22 +469,50 @@ const toWhatsAppNumber = (phone) => {
   return digits.length === 10 ? `91${digits}` : digits;
 };
 
-const shareReceiptOnWhatsApp = (receipt, invoice, company, project) => {
-  const total = Number(invoice.total_amount || 0);
-  const balance = Math.round((total - Number(invoice.amount_paid || 0)) * 100) / 100;
-  const lines = [
-    `Payment Receipt ${receipt.receipt_number || ''}`,
-    `${company.name || ''}`,
-    `Received from: ${invoice.client_name || ''}`,
-    `Amount: ${inr(receipt.amount)}`,
-    `Against Invoice #${invoice.invoice_number || '—'}${project?.project_name ? ` — ${project.project_name}` : ''}`,
-    balance > 0.01 ? `Balance Due: ${inr(balance)}` : 'Invoice fully paid.',
-  ];
-  const text = encodeURIComponent(lines.join('\n'));
+/* ─── WhatsApp share ───
+   Same native-share-first strategy as the quotation page:
+   Best case (mobile Chrome/Safari with file-share support): native share
+   sheet opens with the real PDF attached — user picks WhatsApp, then a
+   contact, and the file goes straight in.
+   Fallback (desktop, or any browser without file-share support): the
+   real PDF downloads, and WhatsApp opens straight to the client's own
+   chat (unlike the quotation page, a receipt targets the payer's number
+   directly when we have it on file, rather than opening a generic
+   contact picker — it's always going back to the same person). */
+const shareReceiptViaWhatsApp = async (receipt, invoice, company, project) => {
+  const balance = Math.round((Number(invoice.total_amount || 0) - Number(invoice.amount_paid || 0)) * 100) / 100;
+  const waText = encodeURIComponent(
+    [
+      `Payment Receipt ${receipt.receipt_number || ''}`,
+      `${company.name || ''}`,
+      `Received from: ${invoice.client_name || ''}`,
+      `Amount: ${inr(receipt.amount)}`,
+      `Against Invoice #${invoice.invoice_number || '—'}${project?.project_name ? ` — ${project.project_name}` : ''}`,
+      balance > 0.01 ? `Balance Due: ${inr(balance)}` : 'Invoice fully paid.',
+    ].join('\n')
+  );
   const num = toWhatsAppNumber(invoice.client_phone);
-  const url = num ? `https://wa.me/${num}?text=${text}` : `https://wa.me/?text=${text}`;
-  window.open(url, '_blank');
+  const waUrl = num ? `https://wa.me/${num}?text=${waText}` : `https://wa.me/?text=${waText}`;
+  try {
+    const { blob, filename } = await buildReceiptPdfBlob(receipt, invoice, company, project);
+    const file = new File([blob], filename, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      // Native share sheet (mobile Chrome/Safari): user picks WhatsApp,
+      // then the contact, and the PDF is attached directly.
+      await navigator.share({ files: [file], title: `Receipt ${receipt.receipt_number}` });
+    } else {
+      // Desktop / unsupported browser: silently download the PDF, then
+      // open WhatsApp straight to the client's chat (or its contact
+      // picker if we don't have a number on file).
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      alert(`"${filename}" downloaded. Attach it in WhatsApp (📎 → Document).`);
+      window.open(waUrl, '_blank');
+    }
+  } catch (err) { if (err?.name !== 'AbortError') alert('Failed to share: ' + err.message); }
 };
+
 
 export default function PaymentReceiptTab({ invoice, payments, company, project, onPaymentAdded }) {
   const [showModal, setShowModal] = useState(false);
@@ -478,23 +599,25 @@ export default function PaymentReceiptTab({ invoice, payments, company, project,
   const handlePrintReceipt = async (rcpt) => {
     setPrintingId(rcpt.id);
     try {
-      printReceipt(rcpt, invoice, company, project);
+      await printReceiptDoc(rcpt, invoice, company, project);
+    } catch (err) {
+      alert('Failed to print: ' + err.message);
     } finally {
-      setTimeout(() => setPrintingId(null), 800);
+      setTimeout(() => setPrintingId(null), 400);
     }
   };
 
   const handleDownloadReceipt = async (rcpt) => {
     setDownloadingId(rcpt.id);
     try {
-      downloadReceiptPDF(rcpt, invoice, company, project);
+      await downloadReceiptPdfDoc(rcpt, invoice, company, project);
     } finally {
-      setTimeout(() => setDownloadingId(null), 800);
+      setDownloadingId(null);
     }
   };
 
-  const handleShareReceipt = (rcpt) => {
-    shareReceiptOnWhatsApp(rcpt, invoice, company, project);
+  const handleShareReceipt = async (rcpt) => {
+    await shareReceiptViaWhatsApp(rcpt, invoice, company, project);
   };
 
   const handleDeleteReceipt = async (rcpt) => {
