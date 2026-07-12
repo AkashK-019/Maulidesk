@@ -253,7 +253,15 @@ export default function Quotations() {
   const [approving, setApproving]       = useState(false);
   const [saving, setSaving]             = useState(false);
   const [company, setCompany]           = useState(COMPANY_DEFAULTS);
+  const [toast, setToast]               = useState(null);
   const shareRef                        = useRef(null);
+  const fontsWarmedRef                  = useRef(null);
+
+  const showToast = (msg, ms = 5000) => {
+    setToast(msg);
+    window.clearTimeout(showToast._t);
+    showToast._t = window.setTimeout(() => setToast(null), ms);
+  };
 
   /* Close share dropdown on outside click */
   useEffect(() => {
@@ -265,6 +273,52 @@ export default function Quotations() {
   }, []);
 
   useEffect(() => { fetchQuotations(); fetchCompany(); }, []);
+
+  /* ─── html2canvas font-cache warm-up ───
+     Root cause of "Decorators word lands in the wrong spot on the FIRST PDF
+     of a session, but is correct on the 2nd+": html2canvas keeps its OWN
+     internal cache for embedding custom @font-face fonts (Tangerine/Tillana/
+     Yatra One) into the canvas it rasterizes. That cache is separate from
+     the browser's document.fonts — so even though we already await
+     document.fonts.ready before capturing, html2canvas's first-ever render
+     of those custom fonts can still complete before its internal font
+     embedding pipeline has finished, silently falling back to a generic
+     font for that first pass only. Every render after that reuses the now
+     warm cache and is correct.
+     Fix: do one throwaway html2canvas pass over a tiny offscreen element
+     using the exact fonts/weights on mount, well before the user clicks
+     Download or WhatsApp, so the cache is already warm by the time it
+     matters. This costs nothing user-visible — it runs in the background. */
+  useEffect(() => {
+    let cancelled = false;
+    const warm = document.createElement('div');
+    warm.style.cssText = 'position:fixed;top:0;left:-10000px;z-index:-1;width:400px;padding:10px;background:#fff;';
+    warm.innerHTML = `
+      <span style="font-family:'Tangerine',cursive;font-weight:700;font-size:38pt;">Decorators</span>
+      <span style="font-family:'Tillana','Yatra One',cursive;font-weight:700;font-size:20pt;">मौली</span>
+      <span style="font-family:'Inter',Arial,sans-serif;font-weight:800;font-size:16pt;">Mauli</span>`;
+    document.body.appendChild(warm);
+
+    fontsWarmedRef.current = (async () => {
+      try {
+        const specs = ['700 38pt Tangerine', '700 1em Tillana', '700 1em "Yatra One"', '800 16pt Inter'];
+        if (document.fonts) {
+          await Promise.all(specs.map(spec => document.fonts.load(spec).catch(() => {})));
+          await document.fonts.ready;
+        }
+        if (cancelled) return;
+        void warm.offsetHeight;
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        if (cancelled) return;
+        // Throwaway render — result is discarded, this only exists to prime
+        // html2canvas's internal font-embedding cache.
+        await html2pdf().set({ html2canvas: { scale: 1, logging: false, useCORS: true } }).from(warm).toCanvas();
+      } catch (_) { /* best-effort warm-up — real capture still has its own guards */ }
+      finally { warm.remove(); }
+    })();
+
+    return () => { cancelled = true; warm.remove(); };
+  }, []);
 
   /* ─── Fetch company settings ─── */
   const fetchCompany = async () => {
@@ -692,14 +746,6 @@ export default function Quotations() {
       : `<tr><td class="qtp-totals-label">CGST</td><td class="qtp-totals-value">₹${cgst.toLocaleString('en-IN',{minimumFractionDigits:2})}</td></tr>
          <tr><td class="qtp-totals-label">SGST</td><td class="qtp-totals-value">₹${sgst.toLocaleString('en-IN',{minimumFractionDigits:2})}</td></tr>`;
 
-    const bankSection = company.bank.bankName ? `
-      <div class="qtp-terms-section">
-        <div class="qtp-terms-head">Bank Details</div>
-        <div class="qtp-tc-item">Bank: ${company.bank.bankName}</div>
-        <div class="qtp-tc-item">A/C No.: ${company.bank.accountNo}</div>
-        <div class="qtp-tc-item">IFSC: ${company.bank.ifsc} · Branch: ${company.bank.branch}</div>
-      </div>` : '';
-
     // Payment Terms / Terms & Conditions: use the saved value as-is (?? not
     // ||) so an intentionally-cleared field renders as nothing instead of
     // falling back to the default boilerplate text.
@@ -721,8 +767,7 @@ export default function Quotations() {
       <div class="qtp-terms-section">
         <div class="qtp-terms-head">Terms &amp; Conditions</div>
         ${termsList.map(t=>`<div class="qtp-tc-item">• ${t}</div>`).join('')}
-      </div>` : ''}
-      ${bankSection}`;
+      </div>` : ''}`;
 
     const sigInnerHTML = `
       <div class="qtp-sig-bottom">
@@ -969,30 +1014,50 @@ const needsExtraPage = !!extraPageTailHTML;
     })
   );
 
+  // The header's "Decorators" script text is absolutely positioned and uses a
+  // custom cursive webfont (Tangerine). html2canvas rasterizes the page before
+  // the browser has necessarily fetched/laid out that font for the very first
+  // time it's used, which is what made it jump downward only in the downloaded
+  // PDF (never in native print, which always waits for real layout). We force
+  // the exact font faces to load, then give the browser two animation frames
+  // to actually flush layout with those fonts before html2canvas snapshots it.
+  const settleFontsAndLayout = async (root) => {
+    const specs = ['700 38pt Tangerine', '700 1em Tillana', '700 1em "Yatra One"', '800 26pt Inter'];
+    try {
+      await Promise.all(specs.map(spec => document.fonts.load(spec).catch(() => {})));
+    } catch (_) { /* Font Loading API unsupported — ignore */ }
+    await document.fonts.ready;
+    // Force a synchronous reflow so layout reflects the now-loaded fonts/images.
+    void root.offsetHeight;
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  };
+
   /* ─── Print ─── */
   const handlePrint = async (q) => {
     setShareOpen(null);
+    if (fontsWarmedRef.current) { try { await fontsWarmedRef.current; } catch (_) {} }
     let root = document.getElementById('qt-print-root');
     if (!root) { root = document.createElement('div'); root.id='qt-print-root'; document.body.appendChild(root); }
     root.innerHTML = await buildQuotationDocHTML(q);
-    await document.fonts.ready;
     await waitForImages(root);
+    await settleFontsAndLayout(root);
     setTimeout(() => window.print(), 100);
   };
 
   /* ─── Download PDF ─── */
   const handleDownloadPDF = async (q) => {
     setShareOpen(null);
+    if (fontsWarmedRef.current) { try { await fontsWarmedRef.current; } catch (_) {} }
     let root = document.getElementById('qt-pdf-export-root');
     if (!root) { root = document.createElement('div'); root.id='qt-pdf-export-root'; document.body.appendChild(root); }
     root.style.width = root.style.minWidth = '794px';
     root.innerHTML = await buildQuotationDocHTML(q);
-    await document.fonts.ready;
     await waitForImages(root);
+    await settleFontsAndLayout(root);
     const pageDivs = Array.from(root.querySelectorAll('.qt-print-doc'));
     pageDivs.forEach(d => { d.style.width=d.style.minWidth='794px'; d.style.height=d.style.minHeight=d.style.maxHeight='1122px'; d.style.overflow='hidden'; });
     const filename = `Quotation-${q.quotation_number||q.id}.pdf`;
-    const opts = { margin:0, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,scrollX:0,scrollY:0,windowWidth:794,width:794,height:1122}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} };
+    const opts = { margin:0, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,scrollX:0,scrollY:0,windowWidth:794,width:794,height:1122,letterRendering:true,imageTimeout:0,logging:false}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} };
     try {
       if (pageDivs.length===1) { await html2pdf().set({...opts,filename}).from(pageDivs[0]).save(); }
       else {
@@ -1008,16 +1073,17 @@ const needsExtraPage = !!extraPageTailHTML;
 
   /* ─── Build PDF blob ─── */
   const buildPdfBlob = async (q) => {
+    if (fontsWarmedRef.current) { try { await fontsWarmedRef.current; } catch (_) {} }
     let root = document.getElementById('qt-pdf-export-root');
     if (!root) { root = document.createElement('div'); root.id='qt-pdf-export-root'; document.body.appendChild(root); }
     root.style.width = root.style.minWidth = '794px';
     root.innerHTML = await buildQuotationDocHTML(q);
-    await document.fonts.ready;
     await waitForImages(root);
+    await settleFontsAndLayout(root);
     const pageDivs = Array.from(root.querySelectorAll('.qt-print-doc'));
     pageDivs.forEach(d => { d.style.width=d.style.minWidth='794px'; d.style.height=d.style.minHeight=d.style.maxHeight='1122px'; d.style.overflow='hidden'; });
     const filename = `Quotation-${q.quotation_number||q.id}.pdf`;
-    const opts = { margin:0, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,scrollX:0,scrollY:0,windowWidth:794,width:794,height:1122}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} };
+    const opts = { margin:0, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true,scrollX:0,scrollY:0,windowWidth:794,width:794,height:1122,letterRendering:true,imageTimeout:0,logging:false}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'} };
     try {
       if (pageDivs.length===1) { const blob=await html2pdf().set({...opts,filename}).from(pageDivs[0]).outputPdf('blob'); return {blob,filename}; }
       const w=html2pdf().set(opts); await w.from(pageDivs[0]).toImg().toPdf();
@@ -1027,29 +1093,47 @@ const needsExtraPage = !!extraPageTailHTML;
     } finally { root.innerHTML=''; root.style.width=root.style.minWidth=''; }
   };
 
-  /* ─── WhatsApp share ─── */
+  /* ─── WhatsApp share ───
+     Best case (mobile Chrome/Safari with file-share support): native share
+     sheet opens with the real PDF attached — user picks WhatsApp, then any
+     contact, and the file goes straight in.
+     Fallback (desktop, or any browser without file-share support): WhatsApp
+     Desktop/Web has no way to receive a file pushed from a website — that
+     capability only exists through a phone's native share sheet. The best a
+     website can do on desktop is (a) open WhatsApp directly to a contact
+     PICKER — not locked to the client's saved number — by omitting the phone
+     number from the wa.me link, which triggers WhatsApp's own "choose a
+     chat" screen, and (b) download the PDF at the same time so it's one
+     drag-and-drop away from being attached once a chat is open. */
   const handleWhatsApp = async (q) => {
     setShareOpen(null);
     const gt    = Number(q.total_amount||0);
-    const phone = (q.client_phone||'').replace(/\D/g,'');
     const waText = encodeURIComponent(
-      `Hello ${q.client_name},\n\nPlease find the attached quotation from *${company.name}*.\n\n` +
+      `Hello,\n\nPlease find the attached quotation from *${company.name}*.\n\n` +
       `*Quotation No.:* ${q.quotation_number}\n` +
       `*Grand Total (incl. GST):* ₹${gt.toLocaleString('en-IN')}\n\n` +
       `Kindly review and confirm at your earliest convenience.\n\n` +
       `Warm regards,\n${company.name}${company.phone ? '\n'+company.phone : ''}`
     );
-    const waUrl = `https://wa.me/${phone?`91${phone}`:''}?text=${waText}`;
+    // No phone number here on purpose — this makes WhatsApp open its own
+    // contact/chat picker instead of a single fixed chat.
+    const waUrl = `https://wa.me/?text=${waText}`;
     try {
       const { blob, filename } = await buildPdfBlob(q);
       const file = new File([blob], filename, { type:'application/pdf' });
       if (navigator.canShare && navigator.canShare({ files:[file] })) {
+        // Native share sheet (mobile Chrome/Safari): user picks WhatsApp,
+        // then any contact, and the PDF is attached directly.
         await navigator.share({ files:[file], title:`Quotation ${q.quotation_number}` });
       } else {
+        // Desktop / unsupported browser: silently download the PDF, then
+        // open WhatsApp straight to its own contact picker — no blocking
+        // dialog, no fixed number.
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
         URL.revokeObjectURL(url);
-        setTimeout(() => window.open(waUrl,'_blank'), 400);
+        showToast(`"${filename}" downloaded. Pick a chat in WhatsApp, then attach it (📎 → Document).`);
+        window.open(waUrl, '_blank');
       }
     } catch (err) { if (err?.name !== 'AbortError') alert('Failed to share: '+err.message); }
   };
@@ -1065,6 +1149,12 @@ const needsExtraPage = !!extraPageTailHTML;
   /* ════════════════════════════════════════ RENDER ═══════════ */
   return (
     <div className="qt-layout">
+      {toast && (
+        <div className="qt-toast" role="status">
+          {toast}
+          <button className="qt-toast-close" onClick={() => setToast(null)} aria-label="Dismiss">&times;</button>
+        </div>
+      )}
       <Sidebar />
       <div className="qt-right">
         <Header title="Quotations" />

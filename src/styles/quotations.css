@@ -94,6 +94,8 @@
 .qt-share-option:hover   { background: #f8fafc; }
 .qt-share-option.pdf-opt { color: #dc2626; }
 .qt-share-option.wa-opt  { color: #16a34a; }
+.qt-share-option:disabled { opacity: .55; cursor: wait; }
+.qt-share-option:disabled:hover { background: none; }
 
 /* Name + client */
 .qt-card-name-wrap { margin-bottom: .75rem; }
@@ -265,6 +267,13 @@
 .qt-approve-sub   { font-size: .83rem; color: #64748b; text-align: center; margin: 0 0 1.5rem; line-height: 1.5; }
 .qt-approve-btns  { display: flex; gap: .75rem; }
 
+/* ── WhatsApp fallback notice modal ── */
+.qt-wa-modal {
+  background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  width: 100%; max-width: 400px; padding: 1.75rem; animation: qtModalIn .2s ease;
+}
+.qt-wa-icon { width: 56px; height: 56px; border-radius: 50%; background: #e9fbf1; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+
 /* ── Shared button styles ── */
 .btn-primary {
   padding: .55rem 1.2rem; background: linear-gradient(135deg,#10b981,#059669);
@@ -375,6 +384,9 @@
 .qtp-brand-lockup {
   position: relative;
   display: inline-block;
+  height: 105px;      /* matches .qtp-brand-logo-img height exactly, so the
+                          absolutely-positioned .qtp-brand-english text below
+                          has a fixed, unambiguous anchor in every renderer */
 }
 .qtp-tagline { font-size: 9.5pt; font-weight: 500; color: #64748b; letter-spacing: .03em; margin-top: 3px; }
 
@@ -684,8 +696,32 @@
   .qt-items-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .qt-items-table { min-width: 580px; width: max-content; }
   .qt-add-row-btn { width: 100%; justify-content: center; }
-  .qt-share-dropdown { right: auto; left: 50%; transform: translateX(-50%); }
+  .qt-share-dropdown { right: 0; left: auto; transform: none; max-width: calc(100vw - 2rem); }
   .qt-approve-modal { border-radius: 14px; padding: 1.25rem 1rem; }
   .qt-approve-btns  { flex-direction: column; }
   .qt-approve-btns .btn-secondary, .qt-approve-btns .btn-approve { width: 100%; text-align: center; }
 }
+/* ── Non-blocking toast (replaces alert() for WhatsApp fallback) ── */
+.qt-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: #1f2937;
+  color: #fff;
+  padding: 12px 40px 12px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  max-width: min(92vw, 420px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.28);
+  animation: qtFade .25s ease;
+}
+.qt-toast-close {
+  position: absolute;
+  top: 6px; right: 8px;
+  background: none; border: none; color: #cbd5e1;
+  font-size: 18px; line-height: 1; cursor: pointer; padding: 4px;
+}
+.qt-toast-close:hover { color: #fff; }
