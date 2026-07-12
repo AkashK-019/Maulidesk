@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import {
   Plus, Search, Edit, Trash2, X, Loader2, Users, User,
-  Save, Wallet, ClipboardList, ChevronLeft, ChevronRight, Download
+  Wallet, ClipboardList, ChevronLeft, ChevronRight, Download
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import { SHIFT_CODES, getShiftMultiplier, getShiftLabel } from '../utils/attendanceCodes';
@@ -39,12 +39,14 @@ export default function Labour() {
   const [selectedLabourId, setSelectedLabourId] = useState(null);
 
   // ---------- Detail workspace state ----------
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('profile'); // profile | attendance | payments
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('profile'); 
 
   // ---------- Attendance form ----------
   const [attDate, setAttDate] = useState(todayStr());
   const [attCode, setAttCode] = useState('P');
   const [savingAttendance, setSavingAttendance] = useState(false);
+  const [savingKey, setSavingKey] = useState(null);
+  const [rollDate, setRollDate] = useState(todayStr());
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
@@ -171,6 +173,18 @@ export default function Labour() {
     return map;
   }, [labourers, allAttendance, allPayments]);
 
+  // ---------- Roll-call state (used by the summary bar + list quick-mark buttons) ----------
+  // Every worker defaults to Absent for rollDate until an explicit mark exists —
+  // this is a *display/derived* default only; nothing is written to the database
+  // until someone actually taps a status, so historical days are never touched.
+  const rollMarkMap = useMemo(() => {
+    const map = {};
+    allAttendance.forEach(a => {
+      if (a.attendance_date === rollDate) map[a.labour_id] = a;
+    });
+    return map;
+  }, [allAttendance, rollDate]);
+
   // ---------- Derived selections ----------
   const selectedLabour = labourers.find(l => l.id === selectedLabourId) || null;
   const isCrew = selectedLabour?.labour_type === 'Group Leader';
@@ -184,6 +198,39 @@ export default function Labour() {
     [allPayments, selectedLabourId]
   );
   const workerStats = selectedLabourId ? (earningsMap[selectedLabourId] || { earned: 0, paid: 0, balance: 0 }) : null;
+
+  // ---------- Payments tab: current month only ----------
+  // Dates are plain 'YYYY-MM-DD' strings, so string comparison against
+  // currentMonthStartKey is safe and avoids any timezone conversion issues.
+  // currentMonthPaid: payments logged this month.
+  // currentMonthOutstanding: this month's earned minus this month's paid.
+  const workerMonthlyStats = useMemo(() => {
+    if (!selectedLabourId || !selectedLabour) return null;
+    const now = new Date();
+    const currentMonthStartKey = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-01`;
+    const currentMonthLabel = MONTH_NAMES[now.getMonth()];
+
+    const dailyRate = parseFloat(selectedLabour.daily_wage) || 0;
+    const headcount = isCrew ? (parseInt(selectedLabour.crew_size, 10) || 1) : 1;
+
+    let currentMonthEarned = 0, currentMonthPaid = 0;
+
+    workerAttendance.forEach(a => {
+      if (a.attendance_date >= currentMonthStartKey) {
+        currentMonthEarned += dailyRate * headcount * getShiftMultiplier(a.status);
+      }
+    });
+
+    workerPayments.forEach(p => {
+      if (p.payment_date >= currentMonthStartKey) currentMonthPaid += (parseFloat(p.amount_paid) || 0);
+    });
+
+    return {
+      currentMonthLabel,
+      currentMonthPaid,
+      currentMonthOutstanding: currentMonthEarned - currentMonthPaid,
+    };
+  }, [selectedLabourId, selectedLabour, isCrew, workerAttendance, workerPayments]);
 
   // The mark for today/selected attDate, if one already exists — lets the tap buttons show current state
   const attDateExistingMark = useMemo(
@@ -240,12 +287,13 @@ export default function Labour() {
     return matchesSearch && matchesTab;
   });
 
+  
   // ---------- Selection ----------
   const selectLabourer = (lab) => {
     setSelectedLabourId(lab.id);
     setActiveWorkspaceTab('profile');
     resetAttendanceForm();
-    resetPaymentForm(lab);
+    resetPaymentForm();
     const d = new Date();
     setCalendarMonth({ year: d.getFullYear(), month: d.getMonth() });
   };
@@ -255,9 +303,8 @@ export default function Labour() {
     setAttCode('P');
   };
 
-  const resetPaymentForm = (lab) => {
-    const sheet = lab ? (earningsMap[lab.id] || { balance: 0 }) : { balance: 0 };
-    setPayAmount(sheet.balance > 0 ? String(Math.round(sheet.balance)) : '');
+  const resetPaymentForm = () => {
+    setPayAmount('');
     setPayDate(todayStr());
     setPayMode('Cash');
     setPayRemarks('');
@@ -344,57 +391,86 @@ export default function Labour() {
   };
 
   // ---------- Attendance CRUD ----------
-  // We always write shift = 'Full Day': the shift *code* (A / ½P / P / 2P / 3P)
-  // itself carries the multi-shift meaning, so one row per labour per day is enough,
-  // and for a Group Leader that one row represents the entire crew.
-  const handleAddAttendance = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!selectedLabourId) return;
+  // Lightweight refresh used after a quick tap — reloads only attendance rows,
+  // so a single tap on one card never flashes a full-page loading spinner
+  // over a 200-person list.
+  const refreshAttendance = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('labour_attendance')
+        .select('*')
+        .order('attendance_date', { ascending: false });
+      if (error) throw error;
+      setAllAttendance(data || []);
+    } catch (err) {
+      console.error('Error refreshing attendance:', err);
+    }
+  };
+
+  // Tap-to-confirm: tapping a status (P / A / ½P / 2P / 3P) saves it immediately —
+  // no separate "Log Attendance" step. We always write shift = 'Full Day': the
+  // shift *code* itself carries the multi-shift meaning, so one row per labour
+  // per day is enough, and for a Group Leader that one row represents the whole crew.
+  // Used both by the list's roll-call buttons and the detail workspace's Attendance tab.
+  const quickMarkAttendance = async (labourId, code, date) => {
+    if (!labourId) return;
+    const key = `${labourId}-${date}`;
+    setSavingKey(key);
     setSavingAttendance(true);
     try {
       const row = {
-        labour_id: selectedLabourId,
-        attendance_date: attDate,
+        labour_id: labourId,
+        attendance_date: date,
         shift: 'Full Day',
-        status: attCode,
-        working_hours: getShiftMultiplier(attCode) * 8,
+        status: code,
+        working_hours: getShiftMultiplier(code) * 8,
         overtime_hours: 0,
       };
       const { error } = await supabase
         .from('labour_attendance')
         .upsert([row], { onConflict: 'labour_id,attendance_date,shift' });
       if (error) throw error;
-      fetchAll();
+      setAttCode(code);
+      await refreshAttendance();
     } catch (err) {
       console.error('Error logging attendance:', err);
       alert('Failed to log attendance.');
     } finally {
+      setSavingKey(null);
       setSavingAttendance(false);
     }
   };
 
-  // "Clear" — wipes a wrongly-logged mark for the currently selected date, leaving that day unmarked.
-  const handleClearAttendanceMark = async () => {
-    if (!selectedLabourId || !attDateExistingMark) return;
+  // "Clear" — wipes a mark for a given labour + date, reverting that day back to
+  // the default Absent state. Used by both the list's roll-call row and the
+  // detail workspace's Attendance tab.
+  const quickClearAttendance = async (labourId, date) => {
+    const mark = allAttendance.find(a => a.labour_id === labourId && a.attendance_date === date);
+    if (!mark) return;
+    const key = `${labourId}-${date}`;
+    setSavingKey(key);
     setSavingAttendance(true);
     try {
-      const { error } = await supabase.from('labour_attendance').delete().eq('id', attDateExistingMark.id);
+      const { error } = await supabase.from('labour_attendance').delete().eq('id', mark.id);
       if (error) throw error;
-      fetchAll();
+      await refreshAttendance();
     } catch (err) {
       console.error('Error clearing attendance:', err);
       alert('Failed to clear attendance.');
     } finally {
+      setSavingKey(null);
       setSavingAttendance(false);
     }
   };
+
+  const handleClearAttendanceMark = () => quickClearAttendance(selectedLabourId, attDate);
 
   const handleDeleteAttendance = async (id) => {
     if (!window.confirm('Delete this attendance entry?')) return;
     try {
       const { error } = await supabase.from('labour_attendance').delete().eq('id', id);
       if (error) throw error;
-      fetchAll();
+      await refreshAttendance();
     } catch (err) {
       console.error('Error deleting attendance:', err);
     }
@@ -432,7 +508,7 @@ export default function Labour() {
       };
       const { error } = await supabase.from('labour_payments').insert([row]);
       if (error) throw error;
-      resetPaymentForm(selectedLabour);
+      resetPaymentForm();
       fetchAll();
     } catch (err) {
       console.error('Error logging payment:', err);
@@ -474,31 +550,44 @@ export default function Labour() {
         <main className="gs-main">
           <div className="labour-workspace animate-fade">
             {/* ============ LEFT: List Pane ============ */}
-            <div className="labour-list-pane">
+            <div className={`labour-list-pane ${selectedLabourId ? 'has-selection' : ''}`}>
               <div className="labour-list-header">
                 <div className="labour-search-box">
-                  <Search size={15} style={{ color: 'var(--text-muted)' }} />
+                  <Search size={19} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                   <input
                     type="text"
-                    placeholder="Search name, skill, crew..."
+                    placeholder="Search by name, skill, or crew..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
-                </div>
-
-                <div className="labour-filter-pills">
-                  {['All', 'Individual', 'Group Leader'].map(tab => (
+                  {searchTerm && (
                     <button
-                      key={tab}
-                      className={`labour-filter-pill ${activeListTab === tab ? 'active' : ''}`}
-                      onClick={() => setActiveListTab(tab)}
+                      type="button"
+                      className="labour-search-clear"
+                      onClick={() => setSearchTerm('')}
+                      aria-label="Clear search"
                     >
-                      {tab === 'Group Leader' ? 'Crews' : tab}
+                      <X size={14} />
                     </button>
-                  ))}
+                  )}
                 </div>
 
-                <button className="btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={openCreateModal}>
+                <div className="labour-list-toolbar">
+                  <div className="labour-filter-pills">
+                    {['All', 'Individual', 'Group Leader'].map(tab => (
+                      <button
+                        key={tab}
+                        className={`labour-filter-pill ${activeListTab === tab ? 'active' : ''}`}
+                        onClick={() => setActiveListTab(tab)}
+                      >
+                        {tab === 'Group Leader' ? 'Crews' : tab}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="labour-list-count">{filteredList.length} of {labourers.length}</span>
+                </div>
+
+                <button className="btn-primary labour-add-btn" onClick={openCreateModal}>
                   <Plus size={15} />
                   <span>Add Labour</span>
                 </button>
@@ -514,31 +603,77 @@ export default function Labour() {
                     No labourers found.
                   </div>
                 ) : (
-                  filteredList.map(l => (
-                    <div
-                      key={l.id}
-                      className={`labour-list-item ${selectedLabourId === l.id ? 'selected' : ''}`}
-                      onClick={() => selectLabourer(l)}
-                    >
-                      <div>
-                        <div className="labour-list-item-name">
-                          {l.labour_type === 'Group Leader' ? <Users size={13} /> : <User size={13} />}
-                          {l.name}
+                  filteredList.map(l => {
+                    const mark = rollMarkMap[l.id];
+                    const effectiveStatus = mark ? mark.status : 'A'; // defaults to Absent until explicitly tapped
+                    const isCrewCard = l.labour_type === 'Group Leader';
+                    const isBusy = savingKey === `${l.id}-${rollDate}`;
+                    return (
+                      <div
+                        key={l.id}
+                        className={`labour-list-item ${selectedLabourId === l.id ? 'selected' : ''}`}
+                        onClick={() => selectLabourer(l)}
+                      >
+                        <div className="labour-list-item-top">
+                          <div className="labour-list-item-main">
+                            <div className="labour-list-item-name">
+                              {isCrewCard ? <Users size={13} /> : <User size={13} />}
+                              {l.name}
+                            </div>
+                            {isCrewCard && (
+                              <div className="labour-list-item-group">
+                                {l.group_name || 'Unnamed Crew'}
+                              </div>
+                            )}
+                            <div className="labour-list-item-meta">
+                              {l.skill_type || 'Helper'} · {formatCurrency(l.daily_wage)}/day
+                              {isCrewCard && ` · ${l.crew_size || 1} worker${(l.crew_size || 1) > 1 ? 's' : ''}`}
+                            </div>
+                          </div>
+                          <span className={typeBadgeClass(l.labour_type)}>{typeBadgeLabel(l.labour_type)}</span>
                         </div>
-                        <div className="labour-list-item-meta">
-                          {l.skill_type || 'Helper'} · {formatCurrency(l.daily_wage)}/day
-                          {l.labour_type === 'Group Leader' && ` · ${l.crew_size || 1} worker${(l.crew_size || 1) > 1 ? 's' : ''}`}
+
+                        <div className="labour-rollcall-row" onClick={(e) => e.stopPropagation()}>
+                          <span
+                            className={`labour-today-dot ${SHIFT_CODES.find(s => s.code === effectiveStatus)?.tone || 'absent'} ${!mark ? 'implicit' : ''}`}
+                            title={mark ? 'Confirmed' : 'Defaulting to Absent — not yet confirmed'}
+                          >
+                            {effectiveStatus}
+                          </span>
+                          <div className="labour-status-toggle-group sm">
+                            {SHIFT_CODES.map(s => (
+                              <button
+                                type="button"
+                                key={s.code}
+                                title={`Mark ${formatDate(rollDate)}: ${s.label}`}
+                                disabled={isBusy}
+                                className={`labour-status-toggle ${s.tone} ${effectiveStatus === s.code ? 'active' : ''}`}
+                                onClick={() => quickMarkAttendance(l.id, s.code, rollDate)}
+                              >
+                                {s.code}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              title="Clear — revert to default Absent"
+                              className="labour-status-toggle clear"
+                              disabled={!mark || isBusy}
+                              onClick={() => quickClearAttendance(l.id, rollDate)}
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                      <span className={typeBadgeClass(l.labour_type)}>{typeBadgeLabel(l.labour_type)}</span>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
+
             </div>
 
             {/* ============ RIGHT: Detail Workspace Pane ============ */}
-            <div className="labour-workspace-pane">
+            <div className={`labour-workspace-pane ${selectedLabour ? 'has-selection' : ''}`}>
               {!selectedLabour ? (
                 <div className="labour-workspace-empty">
                   <ClipboardList size={36} style={{ opacity: 0.4 }} />
@@ -547,6 +682,10 @@ export default function Labour() {
                 </div>
               ) : (
                 <>
+                  <button type="button" className="labour-mobile-back" onClick={() => setSelectedLabourId(null)}>
+                    <ChevronLeft size={16} />
+                    <span>Back to list</span>
+                  </button>
                   <div className="labour-workspace-header">
                     <div>
                       <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -559,6 +698,19 @@ export default function Labour() {
                       </p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {(activeWorkspaceTab === 'attendance' || activeWorkspaceTab === 'payments') && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ padding: '0.4rem 0.7rem' }}
+                          onClick={activeWorkspaceTab === 'attendance' ? exportAttendanceCSV : exportPaymentsCSV}
+                          disabled={activeWorkspaceTab === 'attendance' ? workerAttendance.length === 0 : workerPayments.length === 0}
+                          title="Export CSV"
+                        >
+                          <Download size={13} />
+                          <span>Export CSV</span>
+                        </button>
+                      )}
                       <button className="btn-secondary" style={{ padding: '0.4rem 0.7rem' }} onClick={() => openEditModal(selectedLabour)}>
                         <Edit size={13} />
                       </button>
@@ -614,41 +766,47 @@ export default function Labour() {
                             earnings are automatically calculated as daily wage × crew size × shift.
                           </p>
                         )}
-                        <form className="labour-inline-form" onSubmit={handleAddAttendance}>
+                        <div className="labour-inline-form">
                           <div className="form-group">
                             <label>Date</label>
                             <input type="date" className="input-field" required value={attDate} onChange={(e) => setAttDate(e.target.value)} />
                           </div>
                           <div className="form-group">
-                            <label>{isCrew ? 'Crew Shifts Worked' : 'Shifts Worked'}</label>
+                            <label>{isCrew ? 'Tap to confirm crew shift' : 'Tap to confirm shift'}</label>
                             <div className="labour-status-toggle-group">
-                              {SHIFT_CODES.map(s => (
-                                <button
-                                  type="button"
-                                  key={s.code}
-                                  title={s.label}
-                                  className={`labour-status-toggle ${s.tone} ${attCode === s.code ? 'active' : ''}`}
-                                  onClick={() => setAttCode(s.code)}
-                                >
-                                  {s.code}
-                                </button>
-                              ))}
+                              {SHIFT_CODES.map(s => {
+                                const isBusy = savingKey === `${selectedLabourId}-${attDate}`;
+                                const effectiveStatus = attDateExistingMark ? attDateExistingMark.status : 'A';
+                                return (
+                                  <button
+                                    type="button"
+                                    key={s.code}
+                                    title={s.label}
+                                    disabled={isBusy}
+                                    className={`labour-status-toggle ${s.tone} ${effectiveStatus === s.code ? 'active' : ''}`}
+                                    onClick={() => quickMarkAttendance(selectedLabourId, s.code, attDate)}
+                                  >
+                                    {s.code}
+                                  </button>
+                                );
+                              })}
                               <button
                                 type="button"
-                                title="Clear this date's mark"
+                                title="Clear — revert to default Absent"
                                 className="labour-status-toggle clear"
-                                disabled={!attDateExistingMark}
+                                disabled={!attDateExistingMark || savingAttendance}
                                 onClick={handleClearAttendanceMark}
                               >
                                 <X size={13} />
                               </button>
                             </div>
+                            <span className="labour-tap-hint">
+                              {attDateExistingMark
+                                ? `Marked ${getShiftLabel(attDateExistingMark.status)} for ${formatDate(attDate)}. Saved automatically.`
+                                : `Defaulting to Absent for ${formatDate(attDate)} — tap a code above to confirm otherwise.`}
+                            </span>
                           </div>
-                          <button type="submit" className="btn-primary" disabled={savingAttendance}>
-                            {savingAttendance ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={14} />}
-                            <span>Log Attendance</span>
-                          </button>
-                        </form>
+                        </div>
 
                         <div className="labour-calendar-card">
                           <div className="labour-calendar-header">
@@ -693,12 +851,8 @@ export default function Labour() {
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.25rem 0 0.6rem' }}>
+                        <div style={{ margin: '1.25rem 0 0.6rem' }}>
                           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>Full Attendance History</span>
-                          <button type="button" className="btn-secondary" style={{ padding: '0.35rem 0.7rem', fontSize: '0.78rem' }} onClick={exportAttendanceCSV} disabled={workerAttendance.length === 0}>
-                            <Download size={13} />
-                            <span>Export CSV</span>
-                          </button>
                         </div>
 
                         <div className="labour-table-scroll">
@@ -757,17 +911,13 @@ export default function Labour() {
                           </p>
                         )}
                         <div className="labour-financial-row">
-                          <div className="labour-financial-card">
-                            <span className="label">{isCrew ? 'Crew Total Earned' : 'Total Earned'}</span>
-                            <span className="value">{formatCurrency(workerStats.earned)}</span>
-                          </div>
                           <div className="labour-financial-card paid">
-                            <span className="label">{isCrew ? 'Crew Total Paid' : 'Total Paid'}</span>
-                            <span className="value">{formatCurrency(workerStats.paid)}</span>
+                            <span className="label">{isCrew ? 'Crew Paid' : 'Paid'}</span>
+                            <span className="value">{formatCurrency(workerMonthlyStats?.currentMonthPaid || 0)}</span>
                           </div>
-                          <div className={`labour-financial-card due ${workerStats.balance > 0 ? 'balance-positive' : 'balance-clear'}`}>
-                            <span className="label">{isCrew ? 'Crew Outstanding' : 'Outstanding Balance'}</span>
-                            <span className="value">{formatCurrency(workerStats.balance)}</span>
+                          <div className={`labour-financial-card due ${(workerMonthlyStats?.currentMonthOutstanding || 0) > 0 ? 'balance-positive' : 'balance-clear'}`}>
+                            <span className="label">{isCrew ? 'Crew Outstanding' : 'Outstanding'}</span>
+                            <span className="value">{formatCurrency(workerMonthlyStats?.currentMonthOutstanding || 0)}</span>
                           </div>
                         </div>
 
@@ -798,12 +948,8 @@ export default function Labour() {
                           </button>
                         </form>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1.25rem 0 0.6rem' }}>
+                        <div style={{ margin: '1.25rem 0 0.6rem' }}>
                           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>Payment History</span>
-                          <button type="button" className="btn-secondary" style={{ padding: '0.35rem 0.7rem', fontSize: '0.78rem' }} onClick={exportPaymentsCSV} disabled={workerPayments.length === 0}>
-                            <Download size={13} />
-                            <span>Export CSV</span>
-                          </button>
                         </div>
 
                         <div className="labour-table-scroll">

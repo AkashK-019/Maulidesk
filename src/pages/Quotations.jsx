@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Header  from '../components/Header';
 import {
   Plus, Search, Loader2, FileText,
-  CheckCircle, Clock, XCircle,
+  CheckCircle, Clock,
   Pencil, Trash2, Share2, Check,
   FileDown, MessageCircle, TrendingUp, X,
   Printer, MapPin, FolderOpen
@@ -31,7 +31,7 @@ const COMPANY_DEFAULTS = {
 
 /* ─── Constants ─── */
 const EVENT_TYPES    = ['Wedding','Birthday','Corporate','Anniversary','Engagement','Other'];
-const STATUS_FILTERS = ['All','Pending','Approved','Rejected'];
+const STATUS_FILTERS = ['All','Pending','Approved'];
 const UNITS          = ['Nos','Sq.ft','Meter','Days','hr','Rolls'];
 const GST_OPTIONS    = [0, 5, 12, 18, 28];
 const ITEM_SUGGESTIONS = [
@@ -482,7 +482,7 @@ export default function Quotations() {
       const { data: proj, error: projErr } = await supabase
         .from('projects')
         .insert([{
-          project_name:   q.scope_of_work ? q.scope_of_work.slice(0,60) : `${q.client_name}'s Event`,
+          project_name:   `${q.client_name} - ${q.event_type || 'Event'}`,
           client_name:    q.client_name,
           client_email:   q.client_email   || null,
           client_phone:   q.client_phone   || null,
@@ -524,7 +524,7 @@ export default function Quotations() {
       let storedItems = [];
       try {
         if (q.line_items) {
-          const p = JSON.parse(q.line_items);
+          const p = typeof q.line_items === 'string' ? JSON.parse(q.line_items) : q.line_items;
           storedItems = p?.items ?? (Array.isArray(p) ? p : []);
         }
       } catch {}
@@ -542,7 +542,12 @@ export default function Quotations() {
         client_address: q.client_address || null,
         client_state:   q.client_state   || 'Maharashtra',
         items:          storedItems,
-        line_items:     q.line_items     || null,
+        // NOTE: line_items intentionally left null here — `items` above is
+        // the single source of truth for invoice line data now. Keeping
+        // `line_items` around (rather than dropping the column) means the
+        // fallback read logic in TaxInvoiceTab.jsx still works for any
+        // older invoice rows that only have line_items populated.
+        line_items:     null,
         amount:         q.amount,
         gst_percent:    q.gst_percent,
         gst_type:       q.gst_type,
@@ -562,7 +567,6 @@ export default function Quotations() {
       setApproveTarget(null);
       setApproving(false);
       fetchQuotations();
-      navigate(`/projects/${proj.id}`);
     } catch (err) {
       setApproving(false);
       alert('Failed to approve: ' + err.message);
@@ -1071,7 +1075,6 @@ const needsExtraPage = !!extraPageTailHTML;
           <div className="qt-page-head">
             <div>
               <h1 className="qt-page-title">Quotation Management</h1>
-              <p className="qt-page-sub">Create itemised quotations with GST, download as PDF and convert to projects.</p>
             </div>
             <button className="qt-add-btn" onClick={openAddModal}><Plus size={15}/> New Quotation</button>
           </div>
@@ -1089,10 +1092,6 @@ const needsExtraPage = !!extraPageTailHTML;
             <div className="qt-metric">
               <div className="qt-metric-icon" style={{background:'#ecfdf5',color:'#10b981'}}><CheckCircle size={17}/></div>
               <div className="qt-metric-body"><span className="qt-metric-val">{quotations.filter(q=>q.status==='Approved').length}</span><span className="qt-metric-lbl">Approved</span></div>
-            </div>
-            <div className="qt-metric">
-              <div className="qt-metric-icon" style={{background:'#fef2f2',color:'#ef4444'}}><XCircle size={17}/></div>
-              <div className="qt-metric-body"><span className="qt-metric-val">{quotations.filter(q=>q.status==='Rejected').length}</span><span className="qt-metric-lbl">Rejected</span></div>
             </div>
             <div className="qt-metric">
               <div className="qt-metric-icon" style={{background:'#eff6ff',color:'#3b82f6'}}><TrendingUp size={17}/></div>
@@ -1122,7 +1121,6 @@ const needsExtraPage = !!extraPageTailHTML;
             <div className="qt-empty">
               <FileText size={42} style={{color:'#F2A057',marginBottom:'0.75rem'}}/>
               <p>No quotations found. Create your first one!</p>
-              <button className="qt-add-btn" onClick={openAddModal} style={{marginTop:'1rem'}}><Plus size={14}/> New Quotation</button>
             </div>
           ) : (
             <div className="qt-grid">
@@ -1141,7 +1139,7 @@ const needsExtraPage = !!extraPageTailHTML;
                         {/* Approve */}
                         {!isApproved && (
                           <button className="qt-card-action-btn approve-btn"
-                            title="Approve & Convert to Project"
+                            title="Approve"
                             onClick={()=>setApproveTarget(q)}>
                             <Check size={13}/>
                           </button>
@@ -1466,14 +1464,12 @@ const needsExtraPage = !!extraPageTailHTML;
             <div className="qt-approve-icon"><CheckCircle size={26} color="#10b981"/></div>
             <h3 className="qt-approve-title">Approve Quotation?</h3>
             <p className="qt-approve-sub">
-              This will mark <strong>{approveTarget.quotation_number}</strong> as <strong>Approved</strong> and
-              automatically create a new project for <strong>{approveTarget.client_name}</strong>.
-              You'll be redirected to the Projects page.
+              Approve <strong>{approveTarget.quotation_number}</strong> for <strong>{approveTarget.client_name}</strong>?
             </p>
             <div className="qt-approve-btns">
               <button className="btn-secondary" style={{flex:1}} onClick={()=>setApproveTarget(null)} disabled={approving}>Cancel</button>
               <button className="btn-approve" onClick={handleApprove} disabled={approving}>
-                {approving ? 'Converting…' : 'Yes, Approve & Convert'}
+                {approving ? 'Approving…' : 'Approve'}
               </button>
             </div>
           </div>

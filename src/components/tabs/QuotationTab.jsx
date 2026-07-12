@@ -20,9 +20,9 @@ export default function QuotationTab({ quotation, company, project }) {
 
   if (!quotation) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-        <FileText size={40} style={{ marginBottom: '1rem', opacity: 0.3 }} />
-        <p style={{ margin: 0, fontSize: '0.9rem' }}>No quotation linked to this project yet.</p>
+      <div className="pd-empty">
+        <div className="pd-empty-icon"><FileText size={28} /></div>
+        <p>No quotation linked to this project yet. Create one from the Quotations page to see it here.</p>
       </div>
     );
   }
@@ -47,7 +47,9 @@ export default function QuotationTab({ quotation, company, project }) {
   let lineItems = [];
   try {
     if (quotation.line_items) {
-      const p = JSON.parse(quotation.line_items);
+      const p = typeof quotation.line_items === 'string'
+        ? JSON.parse(quotation.line_items)
+        : quotation.line_items;
       lineItems = p?.items ?? (Array.isArray(p) ? p : []);
     }
   } catch {}
@@ -118,6 +120,8 @@ export default function QuotationTab({ quotation, company, project }) {
 
       {/* Line items */}
       {lineItems.length > 0 && (
+        <>
+        <p className="pd-scroll-hint">Swipe to see more →</p>
         <div className="pd-items-table-wrap">
           <table className="pd-items-table">
             <thead>
@@ -149,6 +153,7 @@ export default function QuotationTab({ quotation, company, project }) {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Notes */}

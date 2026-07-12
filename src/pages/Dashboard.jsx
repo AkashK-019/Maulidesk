@@ -47,7 +47,16 @@ export default function Dashboard() {
         .from('invoices')
         .select('total_amount, amount_paid, status');
 
-      const unpaidInvoices = (invoices || []).filter(i => i.status === 'Unpaid' || i.status === 'Partially Paid');
+      // Use outstanding balance (total - paid) rather than the status string,
+      // so invoices marked 'Overdue' (or any other non-'Paid' status) are
+      // still counted as receivables. This mirrors the effectiveStatus()
+      // logic used in TaxInvoiceTab.jsx.
+      const unpaidInvoices = (invoices || []).filter(i => {
+        if (i.status === 'Paid') return false;
+        const total = parseFloat(i.total_amount) || 0;
+        const paid = parseFloat(i.amount_paid) || 0;
+        return (total - paid) > 0.001; // small epsilon to avoid float rounding noise
+      });
       const unpaidInvoicesVal = unpaidInvoices.reduce((acc, i) => {
         const total = parseFloat(i.total_amount) || 0;
         const paid = parseFloat(i.amount_paid) || 0;
@@ -129,12 +138,9 @@ export default function Dashboard() {
           {/* Header Row */}
           <div className="db-section-header animate-fade">
             <div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--primary)' }}>
+              <h2 className="db-welcome-title">
                 Welcome back, {profile?.full_name || 'Admin'}
               </h2>
-              <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-                Here is what's happening with Mauli Decorators today.
-              </p>
             </div>
             
             <button className="btn-secondary" onClick={fetchDashboardData} disabled={loading}>
@@ -167,7 +173,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Unpaid Invoices Value */}
-                <div className="db-kpi-card" style={{ borderColor: 'rgba(212, 168, 71, 0.4)' }}>
+                <div className="db-kpi-card">
                   <div className="db-kpi-icon" style={{ backgroundColor: 'rgba(212, 168, 71, 0.1)' }}>
                     <Landmark size={20} style={{ color: 'var(--accent)' }} />
                   </div>
@@ -189,7 +195,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Low Stock Items */}
-                <div className="db-kpi-card" style={{ borderLeftColor: kpis.lowStockCount > 0 ? '#ef4444' : 'var(--accent)' }}>
+                <div className="db-kpi-card">
                   <div className="db-kpi-icon" style={{ backgroundColor: kpis.lowStockCount > 0 ? '#fee2e2' : 'var(--primary-subtle)' }}>
                     <Package size={20} style={{ color: kpis.lowStockCount > 0 ? '#ef4444' : 'var(--primary)' }} />
                   </div>
@@ -222,7 +228,7 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="recent-list">
-                      {recentQuotes.map(q => (
+                      {recentQuotes.slice(0, 5).map(q => (
                         <div key={q.id} className="recent-item" onClick={() => navigate('/quotations')}>
                           <div className="recent-info">
                             <span className="recent-title">Quote #{q.quotation_number}</span>
@@ -254,7 +260,7 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="recent-list">
-                      {recentInvoices.map(i => (
+                      {recentInvoices.slice(0, 5).map(i => (
                         <div key={i.id} className="recent-item" onClick={() => navigate('/invoices')}>
                           <div className="recent-info">
                             <span className="recent-title">Invoice #{i.invoice_number}</span>

@@ -1,0 +1,701 @@
+/* ══════════════════════════════════════════
+   Finance Page Styles
+══════════════════════════════════════════ */
+
+/* ── Top Bar ── */
+.fin-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.fin-page-title {
+  font-size: clamp(1.15rem, 3.5vw, 1.4rem);
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.3;
+}
+
+.fin-page-sub {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.fin-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ── Period Tabs ── */
+.fin-period-tabs {
+  display: flex;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+  box-shadow: var(--shadow-sm);
+}
+
+.fin-tab {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.fin-tab:hover {
+  color: var(--primary);
+  background: var(--primary-subtle);
+}
+
+.fin-tab.active {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(30,37,48,0.18);
+}
+
+.fin-refresh {
+  padding: 0.5rem !important;
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Loader ── */
+.fin-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  gap: 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ══════════════════════════════════════════
+   KPI Cards
+══════════════════════════════════════════ */
+.fin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.fin-kpi-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.1rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+}
+
+.fin-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.fin-kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fin-kpi-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.fin-kpi-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fin-kpi-value-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.fin-kpi-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.2;
+  word-break: break-all;
+}
+
+.fin-kpi-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════════
+   Charts Layout
+══════════════════════════════════════════ */
+.fin-chart-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.fin-chart-card {
+  margin-bottom: 0 !important;
+}
+
+.fin-chart-lg { /* takes up 2fr naturally */ }
+.fin-chart-sm { /* takes up 1fr naturally */ }
+
+.fin-chart-row:has(.fin-chart-md) {
+  grid-template-columns: 1fr 1fr;
+}
+
+.fin-chart-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 1rem;
+}
+
+.fin-chart-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fin-chart-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ── Empty state ── */
+.fin-empty-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* ── Pie legend ── */
+.fin-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.fin-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.fin-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fin-legend-val {
+  margin-left: auto;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+}
+
+/* ── Custom tooltip ── */
+.fin-tooltip {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  box-shadow: var(--shadow-lg);
+  font-size: 0.82rem;
+}
+
+.fin-tooltip-label {
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+}
+
+/* ── Summary table ── */
+.fin-summary-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.fin-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.fin-summary-row:last-child {
+  border-bottom: none;
+}
+
+.fin-summary-label {
+  color: var(--text-muted);
+}
+
+.fin-summary-value {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+}
+
+.fin-summary-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.25rem 0;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+
+/* Large tablet → 3 KPIs per row */
+@media (max-width: 1280px) {
+  .fin-kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Tablet → 2-col layout */
+@media (max-width: 1024px) {
+  .fin-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .fin-chart-row {
+    grid-template-columns: 1fr;
+  }
+
+  .fin-chart-row:has(.fin-chart-md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Small tablet */
+@media (max-width: 768px) {
+  .fin-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .fin-period-tabs {
+    order: -1;
+  }
+
+  .fin-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .fin-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .fin-kpi-value {
+    font-size: 1rem;
+  }
+}
+
+/* Mobile */
+@media (max-width: 520px) {
+  .fin-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+  }
+
+  .fin-kpi-card {
+    padding: 0.85rem 0.75rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .fin-kpi-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .fin-kpi-label {
+    font-size: 0.66rem;
+  }
+
+  .fin-kpi-foot {
+    gap: 0.35rem;
+  }
+
+  .fin-kpi-sub {
+    font-size: 0.68rem;
+  }
+
+  .fin-delta {
+    font-size: 0.62rem;
+    padding: 0.08rem 0.32rem;
+  }
+
+  .fin-period-tabs {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .fin-tab {
+    flex: 1;
+    padding: 0.4rem 0.3rem;
+    font-size: 0.73rem;
+    text-align: center;
+  }
+
+  .fin-summary-row {
+    font-size: 0.82rem;
+  }
+}
+
+/* Extra small — only drop to a single column on genuinely tiny screens */
+@media (max-width: 340px) {
+  .fin-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ══════════════════════════════════════════
+   YoY Delta badges (on KPI cards)
+══════════════════════════════════════════ */
+.fin-kpi-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
+}
+
+.fin-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.fin-delta-up {
+  color: #0a8f5b;
+  background: rgba(16,185,129,0.12);
+}
+
+.fin-delta-down {
+  color: #dc2626;
+  background: rgba(239,68,68,0.12);
+}
+
+.fin-delta-neutral {
+  color: var(--text-muted);
+  background: rgba(148,163,184,0.15);
+}
+
+/* ══════════════════════════════════════════
+   Year-over-year overview card
+══════════════════════════════════════════ */
+.fin-yoy-card {
+  margin-bottom: 1.25rem;
+}
+
+.fin-yoy-body {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.fin-yoy-chart {
+  min-width: 0;
+}
+
+.fin-yoy-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--border);
+}
+
+.fin-yoy-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.fin-yoy-stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.fin-yoy-stat-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.fin-yoy-stat-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.15rem 0;
+}
+
+/* ══════════════════════════════════════════
+   Plain-language insight cards
+══════════════════════════════════════════ */
+.fin-insights-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.fin-insight-card {
+  background: var(--primary-subtle, rgba(13,148,136,0.06));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.fin-insight-card p {
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: var(--text);
+  margin: 0;
+}
+
+.fin-insight-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+/* ══════════════════════════════════════════
+   This Year vs Last Year comparison table
+══════════════════════════════════════════ */
+.fin-cmp-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.fin-cmp-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 0.9fr;
+  grid-template-areas: "label ty ly chg";
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.fin-cmp-row:last-child {
+  border-bottom: none;
+}
+
+.fin-cmp-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border);
+}
+
+.fin-cmp-label {
+  grid-area: label;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.fin-cmp-value {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.fin-cmp-ty { grid-area: ty; }
+.fin-cmp-ly { grid-area: ly; }
+
+.fin-cmp-value-muted {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.fin-cmp-change {
+  grid-area: chg;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  text-align: right;
+}
+
+.fin-cmp-up   { color: #0a8f5b; }
+.fin-cmp-down { color: #dc2626; }
+
+/* Mobile — rows become compact mini-cards: metric name on its own line,
+   then This Year / Last Year / Change stacked as labeled mini-columns. */
+@media (max-width: 640px) {
+  .fin-cmp-row {
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-areas:
+      "label label label"
+      "ty ly chg";
+    row-gap: 0.4rem;
+    padding: 0.75rem 0.4rem;
+  }
+
+  .fin-cmp-header {
+    display: none;
+  }
+
+  .fin-cmp-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .fin-cmp-ty,
+  .fin-cmp-ly,
+  .fin-cmp-change {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+    font-size: 0.78rem;
+    text-align: left;
+  }
+
+  .fin-cmp-change {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .fin-cmp-ty::before,
+  .fin-cmp-ly::before,
+  .fin-cmp-change::before {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+  }
+
+  .fin-cmp-ty::before  { content: 'This Year'; }
+  .fin-cmp-ly::before  { content: 'Last Year'; }
+  .fin-cmp-change::before { content: 'Change'; }
+}
+
+@media (max-width: 380px) {
+  .fin-cmp-row {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .fin-cmp-ty,
+  .fin-cmp-ly,
+  .fin-cmp-change {
+    font-size: 0.7rem;
+  }
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — new sections
+══════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .fin-yoy-body {
+    grid-template-columns: 1fr;
+  }
+  .fin-yoy-stats {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    padding-top: 1rem;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+  }
+  .fin-yoy-stat {
+    min-width: 140px;
+  }
+  .insights-row, .fin-insights-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .fin-cmp-row {
+    grid-template-columns: 1.4fr 1fr 1fr 0.8fr;
+    font-size: 0.78rem;
+    padding: 0.6rem 0.35rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .fin-cmp-row {
+    grid-template-columns: 1.2fr 0.9fr 0.9fr 0.7fr;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+  }
+  .fin-yoy-stats {
+    flex-direction: column;
+  }
+}

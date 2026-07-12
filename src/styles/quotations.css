@@ -1,32 +1,11 @@
-/* Google Fonts (Tangerine, Yatra One, Tillana, Cormorant Garamond) used
-   below were previously loaded via @import right here. @import MUST be
-   the very first thing in a stylesheet — but Vite bundles this file
-   together with others, and whichever one loads first in that combined
-   bundle "wins" the top spot, so this @import kept ending up buried in
-   the middle whenever another CSS file (e.g. one with .qt-approve-btns)
-   got concatenated ahead of it. That's a losing position to be in no
-   matter how this file gets reordered.
-   Fix: load these fonts a way that isn't sensitive to import order —
-   pick ONE:
-     (a) Add this same <link> tag to the <head> of your main index.html:
-         <link rel="preconnect" href="https://fonts.googleapis.com">
-         <link href="https://fonts.googleapis.com/css2?family=Tangerine:wght@400;700&family=Yatra+One&family=Tillana:wght@700&family=Cormorant+Garamond:ital,wght@1,700&display=swap" rel="stylesheet">
-     (b) Or move the @import line (unedited, exactly as it was) to the very
-         first line of whichever CSS file your app loads first overall
-         (commonly src/index.css or src/main.css) — NOT this file. */
-/* ═══════════════════════════════════════════════════════════════
-   QUOTATIONS PAGE  — 
-═══════════════════════════════════════════════════════════════ */
-
 /* ── Layout ── */
-.qt-layout  { display: flex; min-height: 100vh; background: #f8fafc; }
+.qt-layout  { display: flex; min-height: 100vh; min-height: 100dvh; background: #f8fafc; }
 .qt-right   { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
 .qt-main    { flex: 1; padding: 1.5rem 1.75rem; overflow-y: auto; }
 
 /* ── Page header ── */
 .qt-page-head  { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
 .qt-page-title { font-size: 1.45rem; font-weight: 700; color: #2E2E2E; margin: 0 0 .2rem; }
-.qt-page-sub   { font-size: .82rem; color: #64748b; margin: 0; }
 
 /* ── Add button ── */
 .qt-add-btn {
@@ -80,10 +59,6 @@
   box-shadow: 0 1px 4px rgba(0,0,0,.05);
   transition: box-shadow .2s, transform .2s, border-color .2s;
   position: relative; overflow: hidden;
-}
-.qt-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, #E8741C, #C25A0F);
 }
 .qt-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.1); transform: translateY(-2px); border-color: #F2A057; }
 
@@ -692,7 +667,6 @@
   .qt-main { padding: .85rem .9rem; }
   .qt-page-head { flex-direction: column; align-items: flex-start; gap: .6rem; }
   .qt-page-title { font-size: 1.2rem; }
-  .qt-add-btn { width: 100%; justify-content: center; }
   .qt-metrics { grid-template-columns: repeat(2, 1fr); gap: .6rem; }
   .qt-metric  { padding: .7rem .85rem; }
   .qt-toolbar { flex-direction: column; align-items: stretch; gap: .6rem; }

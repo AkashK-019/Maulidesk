@@ -1,17 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import {
-  Plus, Search, FolderOpen, Calendar, User,
-  Phone, MapPin, X, Edit, Trash2, ChevronRight,
-  Loader2
+  Search, FolderOpen,
+  Phone, MapPin, X, Edit, Trash2, ChevronRight, ChevronDown, Check,
+  Loader2, Zap, CheckCircle, XCircle
 } from 'lucide-react';
-import { formatDate } from '../utils/helpers';
+import { formatDate, formatCurrency } from '../utils/helpers';
 import '../styles/Projects.css';
 
 const EVENT_TYPES = ['Wedding', 'Birthday', 'Corporate', 'Anniversary', 'Engagement', 'Other'];
+const STATUS_FILTERS = ['All', 'Active', 'Completed', 'Cancelled'];
+const STATUS_OPTIONS  = ['Active', 'Completed', 'Cancelled'];
 
 const STATUS_CONFIG = {
   Active:    { color: '#2563eb', bg: '#eff6ff' },
@@ -36,30 +38,67 @@ export default function Projects() {
   });
   const [saving, setSaving] = useState(false);
 
+  /* ── Custom status dropdown (replaces native <select> for full style control) ── */
+  const [statusMenuOpen, setStatusMenuOpen] = useState(null); // holds the open project's id
+  const statusMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target)) {
+        setStatusMenuOpen(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   useEffect(() => { fetchProjects(); }, []);
 
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [
+        { data, error },
+        { data: invs },
+        { data: rcpts },
+      ] = await Promise.all([
+        supabase.from('projects').select('*').order('created_at', { ascending: false }),
+        supabase.from('invoices').select('project_id, total_amount'),
+        supabase.from('payment_receipts').select('project_id, amount'),
+      ]);
       if (error) throw error;
-      setProjects(data || []);
+
+      // Sum invoice totals and payments per project, and track which
+      // projects actually have an invoice at all (so we can tell "no
+      // invoice yet" apart from "invoice fully paid").
+      const invoiceTotals = {};
+      const invoicedIds = new Set();
+      (invs || []).forEach(inv => {
+        invoiceTotals[inv.project_id] = (invoiceTotals[inv.project_id] || 0) + (Number(inv.total_amount) || 0);
+        invoicedIds.add(inv.project_id);
+      });
+      const paidTotals = {};
+      (rcpts || []).forEach(r => {
+        paidTotals[r.project_id] = (paidTotals[r.project_id] || 0) + (Number(r.amount) || 0);
+      });
+
+      const withFinance = (data || []).map(p => {
+        const invoiceTotal = invoiceTotals[p.id] || 0;
+        const totalPaid = paidTotals[p.id] || 0;
+        return {
+          ...p,
+          hasInvoice: invoicedIds.has(p.id),
+          invoiceTotal,
+          totalPaid,
+          pending: Math.max(invoiceTotal - totalPaid, 0),
+        };
+      });
+
+      setProjects(withFinance);
     } finally { setLoading(false); }
   };
 
   /* ── Project CRUD ── */
-  const openCreateProject = () => {
-    setEditingProject(null);
-    setProjectForm({
-      project_name: '', client_name: '', client_phone: '', client_email: '',
-      client_address: '', event_date: '', event_type: 'Wedding', status: 'Active', notes: ''
-    });
-    setShowProjectModal(true);
-  };
-
   const openEditProject = (p, e) => {
     e.stopPropagation();
     setEditingProject(p);
@@ -139,13 +178,28 @@ export default function Projects() {
           <div className="prj-page-head animate-fade">
             <div>
               <h1 className="prj-page-title">Project Management</h1>
-              <p className="prj-page-sub">
-                Track active events — click any project to view its Quotation, Tax Invoice & Payment Receipts.
-              </p>
+              
             </div>
-            <button className="prj-add-btn" onClick={openCreateProject}>
-              <Plus size={15} /> New Project
-            </button>
+          </div>
+
+          {/* ── Metrics ── */}
+          <div className="prj-metrics animate-fade">
+            <div className="prj-metric">
+              <div className="prj-metric-icon" style={{ background: '#F7EDE5', color: '#A35F37' }}><FolderOpen size={17} /></div>
+              <div className="prj-metric-body"><span className="prj-metric-val">{projects.length}</span><span className="prj-metric-lbl">Total</span></div>
+            </div>
+            <div className="prj-metric">
+              <div className="prj-metric-icon" style={{ background: '#eff6ff', color: '#2563eb' }}><Zap size={17} /></div>
+              <div className="prj-metric-body"><span className="prj-metric-val">{projects.filter(p => p.status === 'Active').length}</span><span className="prj-metric-lbl">Active</span></div>
+            </div>
+            <div className="prj-metric">
+              <div className="prj-metric-icon" style={{ background: '#ecfdf5', color: '#10b981' }}><CheckCircle size={17} /></div>
+              <div className="prj-metric-body"><span className="prj-metric-val">{projects.filter(p => p.status === 'Completed').length}</span><span className="prj-metric-lbl">Completed</span></div>
+            </div>
+            <div className="prj-metric">
+              <div className="prj-metric-icon" style={{ background: '#fef2f2', color: '#ef4444' }}><XCircle size={17} /></div>
+              <div className="prj-metric-body"><span className="prj-metric-val">{projects.filter(p => p.status === 'Cancelled').length}</span><span className="prj-metric-lbl">Cancelled</span></div>
+            </div>
           </div>
 
           {/* ── Toolbar ── */}
@@ -160,29 +214,30 @@ export default function Projects() {
                 className="prj-search-input"
               />
             </div>
-            <select
-              className="prj-status-select"
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-            >
-              <option value="All">All Status</option>
-              <option>Active</option>
-              <option>Completed</option>
-              <option>Cancelled</option>
-            </select>
+            <div className="prj-filters">
+              {STATUS_FILTERS.map(s => (
+                <button
+                  key={s}
+                  className={`prj-filter-btn${statusFilter === s ? ' active' : ''}`}
+                  onClick={() => setStatusFilter(s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* ── Project Grid ── */}
           {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
-              <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent)' }} />
+            <div className="prj-loading">
+              <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: '#c17a4e' }} />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="glass-card text-center" style={{ padding: '3rem', color: 'var(--text-muted)' }}>
+            <div className="prj-empty">
               <FolderOpen size={40} style={{ marginBottom: '1rem', opacity: 0.3 }} />
               <p style={{ margin: 0 }}>
                 {projects.length === 0
-                  ? 'No projects yet. Create one or approve a quotation to get started.'
+                  ? 'No projects yet. Approve a quotation to create your first project.'
                   : 'No projects match your search.'}
               </p>
             </div>
@@ -193,50 +248,102 @@ export default function Projects() {
                 return (
                   <div
                     key={p.id}
-                    className="prj-card"
+                    className={`prj-card${statusMenuOpen === p.id ? ' status-menu-open' : ''}`}
                     onClick={() => navigate(`/projects/${p.id}`)}
-                    style={{ cursor: 'pointer' }}
                   >
-                    <div className="prj-card-top">
+                    <div className="prj-card-head">
                       <div className="prj-card-icon"><FolderOpen size={17} /></div>
-                      <select
-                        className="prj-status-pill"
-                        value={p.status}
-                        onClick={e => e.stopPropagation()}
-                        onChange={e => handleStatusChange(p.id, e.target.value, e)}
-                        style={{ background: sc.bg, color: sc.color }}
-                      >
-                        <option value="Active">Active</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Cancelled">Cancelled</option>
-                      </select>
+                      <div className="prj-card-actions" onClick={e => e.stopPropagation()}>
+                        <div
+                          className="prj-status-dropdown"
+                          ref={statusMenuOpen === p.id ? statusMenuRef : null}
+                        >
+                          <button
+                            type="button"
+                            className="prj-status-trigger"
+                            style={{ background: sc.bg, color: sc.color }}
+                            onClick={() => setStatusMenuOpen(prev => prev === p.id ? null : p.id)}
+                          >
+                            {p.status}
+                            <ChevronDown size={12} style={{ transform: statusMenuOpen === p.id ? 'rotate(180deg)' : 'none' }} />
+                          </button>
+                          {statusMenuOpen === p.id && (
+                            <div className="prj-status-menu">
+                              {STATUS_OPTIONS.map(s => {
+                                const optSc = STATUS_CONFIG[s];
+                                return (
+                                  <button
+                                    key={s}
+                                    type="button"
+                                    className={`prj-status-option${p.status === s ? ' active' : ''}`}
+                                    onClick={e => { handleStatusChange(p.id, s, e); setStatusMenuOpen(null); }}
+                                  >
+                                    <span className="prj-status-dot" style={{ background: optSc.color }} />
+                                    {s}
+                                    {p.status === s && <Check size={13} />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                        <button className="prj-card-action-btn" title="Edit" onClick={e => openEditProject(p, e)}>
+                          <Edit size={13} />
+                        </button>
+                        <button className="prj-card-action-btn delete-btn" title="Delete" onClick={e => handleDeleteProject(p.id, e)}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
 
-                    <p className="prj-card-project-name">{p.project_name}</p>
-                    <h3 className="prj-card-name">{p.client_name}</h3>
-
-                    <div className="prj-card-meta">
-                      {p.client_phone && <span><Phone size={11} /> {p.client_phone}</span>}
-                      {p.event_date   && <span><Calendar size={11} /> {formatDate(p.event_date)}</span>}
-                      {p.event_type   && <span><MapPin size={11} /> {p.event_type}</span>}
+                    <div className="prj-card-name-wrap">
+                      <p className="prj-card-project-name">{p.project_name}</p>
+                      <h3 className="prj-card-name">{p.client_name}</h3>
                     </div>
+
+                    <div className="prj-card-stats">
+                      <div className="prj-stat">
+                        <span className="prj-stat-lbl">Event Type</span>
+                        <span className="prj-stat-val">{p.event_type || '—'}</span>
+                      </div>
+                      <div className="prj-stat">
+                        <span className="prj-stat-lbl">Event Date</span>
+                        <span className="prj-stat-val">{p.event_date ? formatDate(p.event_date) : '—'}</span>
+                      </div>
+                    </div>
+
+                    {p.hasInvoice ? (
+                      <div className="prj-card-finance">
+                        <div className="prj-fin-item">
+                          <span className="prj-fin-lbl">Invoice Total</span>
+                          <span className="prj-fin-val">{formatCurrency(p.invoiceTotal)}</span>
+                        </div>
+                        <div className="prj-fin-divider" />
+                        <div className="prj-fin-item">
+                          <span className="prj-fin-lbl">{p.pending > 0.01 ? 'Pending' : 'Collected'}</span>
+                          <span className={`prj-fin-val ${p.pending > 0.01 ? 'due' : 'paid'}`}>
+                            {p.pending > 0.01 ? formatCurrency(p.pending) : 'Fully Paid'}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="prj-card-finance empty">
+                        <span className="prj-fin-lbl">No invoice raised yet</span>
+                      </div>
+                    )}
 
                     <div className="prj-card-footer">
-                      <button
-                        className="prj-icon-btn"
-                        title="Edit"
-                        onClick={e => openEditProject(p, e)}
-                      >
-                        <Edit size={13} />
-                      </button>
-                      <button
-                        className="prj-icon-btn danger"
-                        title="Delete"
-                        onClick={e => handleDeleteProject(p.id, e)}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                      <span className="prj-open-label">Open <ChevronRight size={13} /></span>
+                      <div className="prj-card-address">
+                        {p.client_phone
+                          ? <><Phone size={11} /> <span>{p.client_phone}</span></>
+                          : p.client_address
+                            ? <><MapPin size={11} /> <span>{p.client_address}</span></>
+                            : null}
+                      </div>
+                    </div>
+
+                    <div className="prj-card-open">
+                      Open <ChevronRight size={13} />
                     </div>
                   </div>
                 );

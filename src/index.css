@@ -1,21 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --primary: #2c1810;         /* Deep Mahogany Charcoal */
-  --primary-light: #4e3629;   /* Muted Warm Brown */
-  --primary-subtle: #faf5ea;  /* Cream Accent background */
-  --accent: #d4a847;          /* Classic Gold */
-  --accent-light: #fdfaf0;    /* Light Cream Gold */
-  --bg: #FAF8F5;              /* Soft Warm Off-White */
+  --primary: #1e2530;          /* Charcoal */
+  --primary-light: #3f4b54;    /* Lighter Charcoal / slate */
+  --primary-subtle: #eefaf8;   /* Pale Teal background */
+  --accent: #0d9488;           /* Teal */
+  --accent-light: #f0fdfa;     /* Light Teal wash */
+  --bg: #F7F9F9;               /* Soft cool off-white */
   --card-bg: rgba(255, 255, 255, 0.95);
-  --text: #372a24;            /* Dark chocolate-grey text */
-  --text-muted: #8c7a70;      /* Muted brown-grey */
-  --border: #e8e2d5;          /* Soft gold-tinted border */
+  --text: #1e2530;             /* Charcoal text */
+  --text-muted: #74838c;       /* Muted charcoal-grey */
+  --border: #e1e9e8;           /* Soft teal-tinted border */
   --radius: 12px;
   --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-sm: 0 1px 2px 0 rgba(44, 24, 16, 0.05);
-  --shadow: 0 4px 10px -2px rgba(44, 24, 16, 0.08), 0 2px 4px -2px rgba(44, 24, 16, 0.04);
-  --shadow-lg: 0 12px 24px -4px rgba(44, 24, 16, 0.1), 0 4px 12px -4px rgba(44, 24, 16, 0.05);
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 22, 0.05);
+  --shadow: 0 4px 10px -2px rgba(15, 23, 22, 0.08), 0 2px 4px -2px rgba(15, 23, 22, 0.04);
+  --shadow-lg: 0 12px 24px -4px rgba(15, 23, 22, 0.1), 0 4px 12px -4px rgba(15, 23, 22, 0.05);
   --glass: rgba(255, 255, 255, 0.85);
 }
 
@@ -46,7 +46,7 @@ a, button, input, select, textarea, .card, .tab-button {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: #dcd4c7; border-radius: 9999px; }
+::-webkit-scrollbar-thumb { background: #cfe0dd; border-radius: 9999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* Layout Grid */
@@ -95,11 +95,11 @@ a, button, input, select, textarea, .card, .tab-button {
 }
 .input-field:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(212, 168, 71, 0.15);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
 
 .input-field:disabled {
-  background-color: #f5f3ef;
+  background-color: #f2f6f5;
   color: var(--text-muted);
   cursor: not-allowed;
 }
@@ -204,7 +204,7 @@ a, button, input, select, textarea, .card, .tab-button {
   color: var(--text);
   vertical-align: middle;
 }
-.app-table tbody tr:hover { background-color: rgba(212, 168, 71, 0.03); }
+.app-table tbody tr:hover { background-color: rgba(13, 148, 136, 0.04); }
 .app-table tbody tr:last-child td { border-bottom: none; }
 
 /* Badges */
@@ -260,7 +260,7 @@ a, button, input, select, textarea, .card, .tab-button {
   gap: 0.75rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border);
-  background-color: #faf9f6;
+  background-color: #f6faf9;
 }
 
 /* Forms */
@@ -545,4 +545,3 @@ a, button, input, select, textarea, .card, .tab-button {
 .spin-anim {
   animation: spin 1s linear infinite;
 }
-

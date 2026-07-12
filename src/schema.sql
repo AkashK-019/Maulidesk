@@ -22,7 +22,7 @@ create table profiles (
   email text not null,
   full_name text,
   role user_role default 'Staff',
-  allowed_pages text[] default '{"dashboard", "quotations", "invoices", "inventory", "labour", "attendance"}'::text[],
+  allowed_pages text[] default '{"dashboard", "projects", "quotations", "invoices", "inventory", "labour", "attendance", "finance"}'::text[],
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -61,9 +61,25 @@ create table inventory_items (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- 3.1 PROJECTS table
+create table projects (
+  id             uuid default uuid_generate_v4() primary key,
+  project_name   text not null,
+  client_name    text not null,
+  client_phone   text,
+  client_email   text,
+  client_address text,
+  event_date     date,
+  event_type     text default 'Wedding',
+  status         text default 'Active',
+  notes          text,
+  created_at     timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- 4. QUOTATIONS
 create table quotations (
   id uuid default uuid_generate_v4() primary key,
+  project_id uuid references projects(id) on delete set null,
   quotation_number text not null unique,
   quotation_date date default current_date,
   client_name text not null,
@@ -74,8 +90,9 @@ create table quotations (
   scope_of_work text,
   items jsonb default '[]'::jsonb, -- Array of items: {name, qty, unit, rate, amount}
   amount numeric not null default 0, -- Base amount
-  gst_percent numeric default 18,
+  gst_percent numeric default 0,
   gst_type text not null default 'CGST_SGST', -- CGST_SGST or IGST
+  gst_amount numeric default 0,
   cgst_amount numeric default 0,
   sgst_amount numeric default 0,
   igst_amount numeric default 0,
@@ -83,6 +100,12 @@ create table quotations (
   validity_days integer default 30,
   notes text,
   status text default 'Pending', -- Pending, Sent, Approved, Rejected
+  payment_terms text,
+  terms_conditions text,
+  line_items jsonb default '[]'::jsonb,
+  client_gst text,
+  event_type text default 'Wedding',
+  event_date date,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -90,6 +113,7 @@ create table quotations (
 create table invoices (
   id uuid default uuid_generate_v4() primary key,
   quotation_id uuid references quotations on delete set null,
+  project_id uuid references projects(id) on delete set null,
   invoice_number text not null unique,
   invoice_date date default current_date,
   due_date date,
@@ -100,8 +124,9 @@ create table invoices (
   client_state text not null default 'Maharashtra',
   items jsonb default '[]'::jsonb, -- Array of items: {name, qty, unit, rate, amount}
   amount numeric not null default 0, -- Base amount
-  gst_percent numeric default 18,
+  gst_percent numeric default 0,
   gst_type text not null default 'CGST_SGST', -- CGST_SGST or IGST
+  gst_amount numeric default 0,
   cgst_amount numeric default 0,
   sgst_amount numeric default 0,
   igst_amount numeric default 0,
@@ -109,7 +134,25 @@ create table invoices (
   amount_paid numeric default 0,
   status text default 'Unpaid', -- Unpaid, Partially Paid, Paid, Overdue
   notes text,
+  client_gst text,
+  payment_terms text,
+  terms_conditions text,
+  line_items jsonb default '[]'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 5.1 PAYMENT RECEIPTS
+create table payment_receipts (
+  id             uuid    default uuid_generate_v4() primary key,
+  invoice_id     uuid    references invoices(id) on delete cascade,
+  project_id     uuid    references projects(id) on delete set null,
+  receipt_number text    not null unique,
+  amount         numeric not null default 0,
+  label          text    not null default 'Payment',
+  payment_mode   text    not null default 'Cash',
+  payment_date   date    default current_date,
+  notes          text,
+  created_at     timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
 -- 6. LABOUR MASTER
@@ -124,6 +167,7 @@ create table labour_master (
   daily_wage numeric default 0,
   aadhaar_number text,
   bank_details text,
+  crew_size integer default 1,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -156,8 +200,18 @@ create table labour_payments (
 ALTER TABLE profiles DISABLE ROW LEVEL SECURITY;
 ALTER TABLE settings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE projects DISABLE ROW LEVEL SECURITY;
 ALTER TABLE quotations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE invoices DISABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_receipts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE labour_master DISABLE ROW LEVEL SECURITY;
 ALTER TABLE labour_attendance DISABLE ROW LEVEL SECURITY;
 ALTER TABLE labour_payments DISABLE ROW LEVEL SECURITY;
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_invoices_project_id    ON invoices(project_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_quotation_id  ON invoices(quotation_id);
+CREATE INDEX IF NOT EXISTS idx_quotations_project_id  ON quotations(project_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_number        ON invoices(invoice_number);
+CREATE INDEX IF NOT EXISTS idx_payment_receipts_invoice_id ON payment_receipts(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_payment_receipts_project_id ON payment_receipts(project_id);

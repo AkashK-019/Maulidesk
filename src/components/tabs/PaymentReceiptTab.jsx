@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
-  CreditCard, Plus, Printer, Download, X,
-  CheckCircle, AlertTriangle, Loader2, IndianRupee
+  CreditCard, Plus, Printer, Download, X, Share2, Trash2,
+  CheckCircle, AlertTriangle, Clock, Loader2, IndianRupee, Receipt, Wallet
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import { supabase } from '../../supabase';
@@ -36,6 +37,18 @@ const numToWords = (num) => {
 const inr = (n) =>
   `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+// IMPORTANT: never use `new Date().toISOString().split('T')[0]` for "today".
+// toISOString() converts to UTC first, so anywhere before ~5:30am IST it
+// still reports *yesterday's* date. This uses the browser's local timezone
+// instead, so it always matches the date the user actually sees.
+const todayLocal = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+};
+
 /* ── Generate receipt number like MLD-RCT-2526-001 ── */
 const genReceiptNumber = async () => {
   const now = new Date();
@@ -63,7 +76,7 @@ const buildReceiptHTML = (receipt, invoice, company, project) => {
   const total    = Number(invoice.total_amount || 0);
   const received = Number(receipt.amount || 0);
   const prevPaid = Number(invoice.amount_paid || 0) - received; // paid before THIS receipt
-  const balance  = total - Number(invoice.amount_paid || 0);
+  const balance  = Math.round((total - Number(invoice.amount_paid || 0)) * 100) / 100;
 
   const dateStr = new Date(receipt.payment_date).toLocaleDateString('en-IN', {
     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -338,25 +351,78 @@ const printReceipt = (receipt, invoice, company, project) => {
   setTimeout(() => { win.print(); win.close(); }, 800);
 };
 
+// NOTE: there's no PDF-generation library wired up in this file, so
+// "download" opens the same print-ready document and leaves the actual
+// save-as-PDF step to the browser's print dialog (Print > Save as PDF).
+// Quotation/Invoice tabs call a shared downloadDocumentPDF() from
+// ../../utils/documentPrint — if that helper does something more direct
+// (e.g. a PDF lib), point this at the same function for consistency.
+const downloadReceiptPDF = (receipt, invoice, company, project) => {
+  const html = buildReceiptHTML(receipt, invoice, company, project);
+  const win = window.open('', '_blank');
+  if (!win) { alert('Please allow popups to download.'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { win.print(); }, 800);
+};
+
+// Formats an Indian mobile number for a wa.me deep link: strips
+// non-digits and prefixes the country code if a bare 10-digit number
+// was stored.
+const toWhatsAppNumber = (phone) => {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (!digits) return '';
+  return digits.length === 10 ? `91${digits}` : digits;
+};
+
+const shareReceiptOnWhatsApp = (receipt, invoice, company, project) => {
+  const total = Number(invoice.total_amount || 0);
+  const balance = Math.round((total - Number(invoice.amount_paid || 0)) * 100) / 100;
+  const lines = [
+    `Payment Receipt ${receipt.receipt_number || ''}`,
+    `${company.name || ''}`,
+    `Received from: ${invoice.client_name || ''}`,
+    `Amount: ${inr(receipt.amount)}`,
+    `Against Invoice #${invoice.invoice_number || '—'}${project?.project_name ? ` — ${project.project_name}` : ''}`,
+    balance > 0.01 ? `Balance Due: ${inr(balance)}` : 'Invoice fully paid.',
+  ];
+  const text = encodeURIComponent(lines.join('\n'));
+  const num = toWhatsAppNumber(invoice.client_phone);
+  const url = num ? `https://wa.me/${num}?text=${text}` : `https://wa.me/?text=${text}`;
+  window.open(url, '_blank');
+};
+
 export default function PaymentReceiptTab({ invoice, payments, company, project, onPaymentAdded }) {
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ amount: '', label: 'Advance', customLabel: '', mode: 'Cash', date: new Date().toISOString().split('T')[0], notes: '' });
+  const [form, setForm] = useState({ amount: '', label: 'Advance', customLabel: '', mode: 'Cash', date: todayLocal(), notes: '' });
   const [saving, setSaving] = useState(false);
   const [printingId, setPrintingId] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   if (!invoice) {
     return (
-      <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-        <CreditCard size={40} style={{ marginBottom: '1rem', opacity: 0.3 }} />
-        <p style={{ margin: 0, fontSize: '0.9rem' }}>Payment receipts will appear here after the tax invoice is generated.</p>
+      <div className="pd-empty">
+        <div className="pd-empty-icon"><CreditCard size={28} /></div>
+        <p>Payment receipts will appear here after the tax invoice is generated.</p>
       </div>
     );
   }
 
   const totalAmt = Number(invoice.total_amount || 0);
   const totalPaid = Number(invoice.amount_paid || 0);
-  const balance = totalAmt - totalPaid;
+  // Round to 2 decimals immediately so the value used for display, the
+  // placeholder text, and the input's native `max` attribute are always
+  // identical. Without this, floating-point subtraction can produce
+  // something like 43609.400000000006, which displays as "43609.40" but
+  // rejects that exact typed value under HTML5 max validation.
+  const balance = Math.round((totalAmt - totalPaid) * 100) / 100;
   const paidPct = totalAmt > 0 ? Math.min(100, Math.round((totalPaid / totalAmt) * 100)) : 0;
+  // Single brand-consistent violet accent instead of a traffic-light
+  // scheme — keeps the progress bar visually distinct from the KPI
+  // cards below it (which already use blue/green/red).
+  const progressColor = { fill: '#7c3aed', text: '#7c3aed', bg: '#f5f3ff' };
   const isFullyPaid = balance <= 0.01;
 
   const handleAddPayment = async (e) => {
@@ -392,13 +458,21 @@ export default function PaymentReceiptTab({ invoice, payments, company, project,
       if (invErr) throw invErr;
 
       setShowModal(false);
-      setForm({ amount: '', label: 'Advance', customLabel: '', mode: 'Cash', date: new Date().toISOString().split('T')[0], notes: '' });
+      setForm({ amount: '', label: 'Advance', customLabel: '', mode: 'Cash', date: todayLocal(), notes: '' });
       if (onPaymentAdded) onPaymentAdded();
     } catch (err) {
       alert('Failed to record payment: ' + err.message);
     } finally {
       setSaving(false);
     }
+  };
+
+  // If the browser tab has been open since a previous day, the `date`
+  // captured in initial state goes stale — React won't recompute it just
+  // because midnight passed. Refresh it fresh every time the modal opens.
+  const openPaymentModal = () => {
+    setForm(prev => ({ ...prev, date: todayLocal() }));
+    setShowModal(true);
   };
 
   const handlePrintReceipt = async (rcpt) => {
@@ -410,66 +484,129 @@ export default function PaymentReceiptTab({ invoice, payments, company, project,
     }
   };
 
+  const handleDownloadReceipt = async (rcpt) => {
+    setDownloadingId(rcpt.id);
+    try {
+      downloadReceiptPDF(rcpt, invoice, company, project);
+    } finally {
+      setTimeout(() => setDownloadingId(null), 800);
+    }
+  };
+
+  const handleShareReceipt = (rcpt) => {
+    shareReceiptOnWhatsApp(rcpt, invoice, company, project);
+  };
+
+  const handleDeleteReceipt = async (rcpt) => {
+    if (!window.confirm(`Delete receipt ${rcpt.receipt_number}? This will also reduce the invoice's recorded payments by ${formatCurrency(rcpt.amount)}.`)) return;
+    setDeletingId(rcpt.id);
+    try {
+      const { error: delErr } = await supabase.from('payment_receipts').delete().eq('id', rcpt.id);
+      if (delErr) throw delErr;
+
+      const newPaid = Math.max(0, totalPaid - Number(rcpt.amount || 0));
+      const newStatus = newPaid <= 0 ? 'Unpaid' : newPaid >= totalAmt - 0.01 ? 'Paid' : 'Partially Paid';
+      const { error: invErr } = await supabase
+        .from('invoices')
+        .update({ amount_paid: newPaid, status: newStatus })
+        .eq('id', invoice.id);
+      if (invErr) throw invErr;
+
+      if (onPaymentAdded) onPaymentAdded();
+    } catch (err) {
+      alert('Failed to delete receipt: ' + err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="pd-tab-content">
-      {/* Payment progress banner similar to old invoice tab */}
-      {isFullyPaid ? (
-        <div className="pd-paid-banner">
-          <CheckCircle size={18} />
-          <span>Invoice Fully Paid ✅ — All payments received!</span>
+      {/* Header bar — matches Quotation / Tax Invoice tabs */}
+      <div className="pd-section-bar">
+        <div>
+          <h3 className="pd-section-title">
+            <IndianRupee size={16} /> Payment Receipts
+          </h3>
+          {isFullyPaid ? (
+            <span className="pd-status-badge" style={{ color: '#10b981', background: '#ecfdf5' }}>
+              <CheckCircle size={12} /> Fully Paid
+            </span>
+          ) : (
+            <span className="pd-status-badge" style={{ color: progressColor.text, background: progressColor.bg }}>
+              <Clock size={12} /> {paidPct}% Collected
+            </span>
+          )}
         </div>
-      ) : (
-        <div className="pd-progress-banner">
-          <div className="pd-progress-top">
-            <span>Payment Progress</span>
-            <span className="pd-progress-pct">{paidPct}% collected</span>
-          </div>
-          <div className="pd-progress-bar-bg">
-            <div
-              className="pd-progress-bar-fill"
-              style={{ width: `${paidPct}%`, background: '#f59e0b' }}
-            />
-          </div>
-          <div className="pd-progress-nums">
-            <span>Paid: <strong style={{ color: '#10b981' }}>{formatCurrency(totalPaid)}</strong></span>
-            <span>Balance: <strong style={{ color: '#ef4444' }}>{formatCurrency(balance)}</strong></span>
-          </div>
-        </div>
-      )}
-
-      {/* Summary KPIs */}
-      <div className="pd-pay-kpis">
-        <div className="pd-pay-kpi">
-          <span>Invoice Total</span>
-          <strong>{formatCurrency(totalAmt)}</strong>
-        </div>
-        <div className="pd-pay-kpi green">
-          <span>Total Received</span>
-          <strong>{formatCurrency(totalPaid)}</strong>
-        </div>
-        <div className={`pd-pay-kpi ${isFullyPaid ? 'green' : 'red'}`}>
-          <span>Balance Due</span>
-          <strong>{formatCurrency(balance)}</strong>
-        </div>
-      </div>
-
-      {/* Header + add button */}
-      <div className="pd-section-bar" style={{ marginTop: '1.25rem' }}>
-        <h3 className="pd-section-title"><IndianRupee size={16} /> Payment History ({payments.length})</h3>
         {!isFullyPaid && (
-          <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 1rem', fontSize: '0.83rem' }} onClick={() => setShowModal(true)}>
+          <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.5rem 1rem', fontSize: '0.83rem' }} onClick={openPaymentModal}>
             <Plus size={14} /> Record Payment
           </button>
         )}
       </div>
 
+      {/* Payment progress bar */}
+      {!isFullyPaid && (
+        <div className="pd-progress-banner">
+          <div className="pd-progress-top">
+            <span>Payment Progress</span>
+            <span className="pd-progress-pct" style={{ color: progressColor.text }}>{paidPct}% Collected</span>
+          </div>
+          <div className="pd-progress-bar-bg">
+            <div className="pd-progress-bar-fill" style={{ width: `${paidPct}%`, background: progressColor.fill }} />
+          </div>
+        </div>
+      )}
+
+      {/* Amount summary — icon-tile KPI cards, same visual language as
+          the metric cards on the Projects list page */}
+      <div className="pd-pay-kpis">
+        <div className="pd-pay-kpi">
+          <div className="pd-pay-kpi-icon" style={{ background: '#eff6ff', color: '#2563eb' }}>
+            <Receipt size={18} />
+          </div>
+          <div className="pd-pay-kpi-body">
+            <span className="pd-pay-kpi-val">{formatCurrency(totalAmt)}</span>
+            <span className="pd-pay-kpi-lbl">Invoice Total</span>
+          </div>
+        </div>
+        <div className="pd-pay-kpi">
+          <div className="pd-pay-kpi-icon" style={{ background: '#ecfdf5', color: '#10b981' }}>
+            <Wallet size={18} />
+          </div>
+          <div className="pd-pay-kpi-body">
+            <span className="pd-pay-kpi-val">{formatCurrency(totalPaid)}</span>
+            <span className="pd-pay-kpi-lbl">Total Received</span>
+          </div>
+        </div>
+        <div className="pd-pay-kpi">
+          <div
+            className="pd-pay-kpi-icon"
+            style={isFullyPaid ? { background: '#ecfdf5', color: '#10b981' } : { background: '#fef2f2', color: '#ef4444' }}
+          >
+            {isFullyPaid ? <CheckCircle size={18} /> : <AlertTriangle size={18} />}
+          </div>
+          <div className="pd-pay-kpi-body">
+            <span className="pd-pay-kpi-val">{isFullyPaid ? 'Fully Paid' : formatCurrency(balance)}</span>
+            <span className="pd-pay-kpi-lbl">Balance Due</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment history header */}
+      <div className="pd-section-bar" style={{ marginTop: '0.25rem' }}>
+        <h3 className="pd-section-title"><IndianRupee size={16} /> Payment History ({payments.length})</h3>
+      </div>
+
       {/* Payments table */}
       {payments.length === 0 ? (
-        <div className="glass-card text-center" style={{ padding: '2rem', color: 'var(--text-muted)' }}>
-          <CreditCard size={32} style={{ marginBottom: '0.75rem', opacity: 0.3 }} />
-          <p style={{ margin: 0, fontSize: '0.85rem' }}>No payments recorded yet. Click "Record Payment" to add the first installment.</p>
+        <div className="pd-empty">
+          <div className="pd-empty-icon"><CreditCard size={26} /></div>
+          <p>No payments recorded yet. Click "Record Payment" to add the first installment.</p>
         </div>
       ) : (
+        <>
+        <p className="pd-scroll-hint">Swipe to see more →</p>
         <div className="pd-items-table-wrap">
           <table className="pd-items-table">
             <thead>
@@ -493,11 +630,21 @@ export default function PaymentReceiptTab({ invoice, payments, company, project,
                   </td>
                   <td data-label="Mode"><span className="pd-mode-badge">{rcpt.payment_mode}</span></td>
                   <td className="pd-item-amount" data-label="Amount" style={{ textAlign: 'right', color: '#10b981', fontWeight: 600 }}>{formatCurrency(rcpt.amount)}</td>
-                  <td className="pd-item-action" style={{ textAlign: 'center' }}>
-                    <button className="pd-action-btn" style={{ minWidth: 'auto', padding: '4px 10px' }} onClick={() => handlePrintReceipt(rcpt)} disabled={printingId === rcpt.id} title="Print Receipt">
-                      {printingId === rcpt.id ? <Loader2 size={13} className="spin" /> : <Printer size={13} />}
-                      <span>Print</span>
-                    </button>
+                  <td className="pd-item-action" data-label="Action" style={{ textAlign: 'center' }}>
+                    <div className="pd-icon-actions">
+                      <button className="pd-icon-btn" onClick={() => handlePrintReceipt(rcpt)} disabled={printingId === rcpt.id} title="Print">
+                        {printingId === rcpt.id ? <Loader2 size={14} className="spin" /> : <Printer size={14} />}
+                      </button>
+                      <button className="pd-icon-btn pdf" onClick={() => handleDownloadReceipt(rcpt)} disabled={downloadingId === rcpt.id} title="Download PDF">
+                        {downloadingId === rcpt.id ? <Loader2 size={14} className="spin" /> : <Download size={14} />}
+                      </button>
+                      <button className="pd-icon-btn wa" onClick={() => handleShareReceipt(rcpt)} title="Share on WhatsApp">
+                        <Share2 size={14} />
+                      </button>
+                      <button className="pd-icon-btn danger" onClick={() => handleDeleteReceipt(rcpt)} disabled={deletingId === rcpt.id} title="Delete">
+                        {deletingId === rcpt.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -511,18 +658,26 @@ export default function PaymentReceiptTab({ invoice, payments, company, project,
             </tfoot>
           </table>
         </div>
+        </>
       )}
 
-      {/* Add Payment Modal */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content pd-modal" style={{ maxWidth: 480 }}>
-            <div className="modal-header">
-              <h3 style={{ margin: 0 }}>Record Payment</h3>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
+      {/* Add Payment Modal — rendered via a portal straight into
+          document.body. This is deliberate: this component sits deep
+          inside main-content / gs-main, and position:fixed only escapes
+          to the real viewport if NONE of its ancestors set a transform,
+          filter, or similar "containing block" property. A portal
+          sidesteps that entirely — the overlay becomes a true top-level
+          element, centered on the whole screen exactly like the Edit
+          Project modal, with no scrolling required. */}
+      {showModal && createPortal(
+        <div className="pd-rcpt-overlay" onClick={() => setShowModal(false)}>
+          <div className="pd-rcpt-card" onClick={e => e.stopPropagation()}>
+            <div className="pd-rcpt-head">
+              <h3>Record Payment</h3>
+              <button type="button" onClick={() => setShowModal(false)}><X size={18} /></button>
             </div>
-            <form onSubmit={handleAddPayment}>
-              <div className="modal-body">
+            <form onSubmit={handleAddPayment} className="pd-rcpt-form">
+              <div className="pd-rcpt-body">
 
                 {/* Balance reminder */}
                 <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: '1rem', fontSize: '0.83rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -563,7 +718,7 @@ export default function PaymentReceiptTab({ invoice, payments, company, project,
                   </div>
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="pd-rcpt-foot">
                 <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="btn-primary" disabled={saving}>
                   {saving ? <><Loader2 size={13} className="spin" /> Saving</> : <><Download size={13} /> Save & Print Receipt</>}
@@ -571,7 +726,8 @@ export default function PaymentReceiptTab({ invoice, payments, company, project,
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -5,9 +5,7 @@ import { isSupabaseConfigured, supabase } from '../supabase';
 import '../styles/login.css';
 
 // ── ImageKit background image URL ──────────────────────────────
-// Replace this with your ImageKit URL when ready:
-// e.g. 'https://ik.imagekit.io/yourID/login_bg.jpg'
-const BG_IMAGE_URL = '/login_bg.png';
+const BG_IMAGE_URL = 'https://ik.imagekit.io/greenspire/GreenDesk/luxurious-dinner-hall-with-large-crystal-chandelier.avif';
 // ───────────────────────────────────────────────────────────────
 
 export default function Login() {
@@ -103,6 +101,16 @@ export default function Login() {
         {/* Brand */}
         <div className="lp-brand">
           <span className="lp-brand-name">Mauli Decorators</span>
+          <svg className="lp-brand-flourish" viewBox="0 0 92 10" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="lp-flourish-gradient" x1="0" y1="0" x2="92" y2="0" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#0d9488" stopOpacity="0" />
+                <stop offset="50%" stopColor="#2dd4bf" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#0d9488" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d="M1 5 Q 23 1, 46 5 T 91 5" />
+          </svg>
         </div>
 
         {/* Heading */}

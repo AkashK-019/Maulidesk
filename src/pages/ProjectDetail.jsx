@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import {
-  ArrowLeft, FolderOpen, User, Phone, MapPin,
+  ArrowLeft, User, Phone, MapPin,
   Calendar, FileText, Receipt, CreditCard,
   Edit, Loader2, X
 } from 'lucide-react';
@@ -103,6 +103,7 @@ export default function ProjectDetail() {
   };
 
   const handlePaymentAdded = () => fetchAll(id);
+  const handleInvoiceAdded = () => fetchAll(id);
 
   // Edit project
   const openEdit = () => {
@@ -141,12 +142,15 @@ export default function ProjectDetail() {
 
   if (loading) {
     return (
-      <div className="app-container">
+      <div className="app-container pd-page">
         <Sidebar />
         <div className="main-content">
           <Header title="Project Detail" />
-          <main className="gs-main" style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
-            <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent)' }} />
+          <main className="gs-main" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem', minHeight: '50vh' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.85rem', color: 'var(--pd-muted, #8993a8)' }}>
+              <Loader2 size={30} style={{ animation: 'spin 1s linear infinite', color: '#c17a4e' }} />
+              <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Loading project…</span>
+            </div>
           </main>
         </div>
       </div>
@@ -164,7 +168,7 @@ export default function ProjectDetail() {
   ];
 
   return (
-    <div className="app-container">
+    <div className="app-container pd-page">
       <Sidebar />
       <div className="main-content">
         <Header title="Project Detail" />
@@ -194,7 +198,6 @@ export default function ProjectDetail() {
             </div>
 
             <div className="pd-project-info">
-              <div className="pd-project-icon"><FolderOpen size={22} /></div>
               <div>
                 <h1 className="pd-project-name">{project.project_name}</h1>
                 <div className="pd-project-meta">
@@ -234,7 +237,7 @@ export default function ProjectDetail() {
               <QuotationTab quotation={quotation} company={company} project={project} />
             )}
             {activeTab === 'invoice' && (
-              <TaxInvoiceTab invoice={invoice} company={company} project={project} />
+              <TaxInvoiceTab invoice={invoice} company={company} project={project} onInvoiceCreated={handleInvoiceAdded} />
             )}
             {activeTab === 'payments' && (
               <PaymentReceiptTab

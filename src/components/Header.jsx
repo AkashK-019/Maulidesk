@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Menu, Loader2, ArrowRight, X } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
 
 export default function Header({ title }) {
-  const { profile } = useAuth();
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [alerts, setAlerts] = useState([]);
@@ -90,8 +88,7 @@ export default function Header({ title }) {
     navigate(to);
   };
 
-  const dangerCount  = alerts.filter(a => a.type === 'danger').length;
-  const warningCount = alerts.filter(a => a.type === 'warning').length;
+  const dangerCount = alerts.filter(a => a.type === 'danger').length;
 
   return (
     <header className="gs-header">
@@ -193,7 +190,7 @@ export default function Header({ title }) {
         .gs-header {
           height: 60px;
           background-color: #ffffff;
-          border-bottom: 1px solid #e8e2d5;
+          border-bottom: 1px solid #e1e9e8;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -221,7 +218,7 @@ export default function Header({ title }) {
           font-family: 'Outfit', sans-serif;
           font-size: 1.05rem;
           font-weight: 700;
-          color: #2c1810;
+          color: #1e2530;
           line-height: 1.2;
           white-space: nowrap;
           overflow: hidden;
@@ -234,10 +231,10 @@ export default function Header({ title }) {
           justify-content: center;
           width: 34px;
           height: 34px;
-          background: #faf5ea;
+          background: #e6f7f5;
           border: none;
           border-radius: 8px;
-          color: #2c1810;
+          color: #1e2530;
           cursor: pointer;
           flex-shrink: 0;
         }
@@ -260,18 +257,18 @@ export default function Header({ title }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #FAF8F5;
-          border: 1px solid #e8e2d5;
+          background: #F3F8F7;
+          border: 1px solid #e1e9e8;
           border-radius: 9px;
-          color: #2c1810;
+          color: #1e2530;
           cursor: pointer;
           transition: all 0.15s ease;
         }
 
         .gs-bell-btn:hover {
-          background: #faf5ea;
-          border-color: #d4a847;
-          color: #d4a847;
+          background: #e6f7f5;
+          border-color: #0d9488;
+          color: #0d9488;
         }
 
         .gs-bell-dot {
@@ -291,9 +288,9 @@ export default function Header({ title }) {
           width: 330px;
           max-width: calc(100vw - 2rem);
           background: #ffffff;
-          border: 1px solid #e8e2d5;
+          border: 1px solid #e1e9e8;
           border-radius: 14px;
-          box-shadow: 0 12px 32px rgba(44,24,16,0.12);
+          box-shadow: 0 12px 32px rgba(15,23,22,0.12);
           overflow: hidden;
           z-index: 200;
         }
@@ -303,7 +300,7 @@ export default function Header({ title }) {
           align-items: center;
           justify-content: space-between;
           padding: 0.9rem 1rem 0.75rem;
-          border-bottom: 1px solid #faf5ea;
+          border-bottom: 1px solid #e6f7f5;
           gap: 0.5rem;
         }
 
@@ -317,7 +314,7 @@ export default function Header({ title }) {
         .gs-notif-title {
           font-size: 0.85rem;
           font-weight: 700;
-          color: #2c1810;
+          color: #1e2530;
           font-family: 'Outfit', sans-serif;
           white-space: nowrap;
         }
@@ -349,7 +346,7 @@ export default function Header({ title }) {
           cursor: pointer;
           font-size: 0.72rem;
           font-weight: 600;
-          color: #8c7a70;
+          color: #74838c;
           white-space: nowrap;
         }
 
@@ -357,13 +354,13 @@ export default function Header({ title }) {
           background: none;
           border: none;
           cursor: pointer;
-          color: #8c7a70;
+          color: #74838c;
           display: flex;
           align-items: center;
         }
 
         .gs-notif-list {
-          max-height: 280px;
+          max-height: min(280px, 45dvh);
           overflow-y: auto;
         }
 
@@ -373,14 +370,14 @@ export default function Header({ title }) {
           justify-content: center;
           gap: 8px;
           padding: 1.5rem;
-          color: #8c7a70;
+          color: #74838c;
           font-size: 0.82rem;
         }
 
         .gs-notif-empty {
           padding: 2rem 1.5rem;
           text-align: center;
-          color: #8c7a70;
+          color: #74838c;
           font-size: 0.85rem;
         }
 
@@ -396,14 +393,14 @@ export default function Header({ title }) {
           align-items: center;
           gap: 10px;
           padding: 0.8rem 1rem;
-          border-bottom: 1px solid #f9f8f6;
+          border-bottom: 1px solid #f1f6f5;
           cursor: pointer;
           font-size: 0.82rem;
           transition: background 0.15s;
         }
 
         .gs-alert-item:hover {
-          background-color: #faf9f6;
+          background-color: #f5f9f8;
         }
 
         .gs-alert-bar {
@@ -415,13 +412,13 @@ export default function Header({ title }) {
 
         .gs-alert-text {
           flex: 1;
-          color: #372a24;
+          color: #1e2530;
           min-width: 0;
           word-break: break-word;
         }
 
         .gs-alert-arrow {
-          color: #8c7a70;
+          color: #74838c;
           flex-shrink: 0;
         }
 
@@ -449,12 +446,25 @@ export default function Header({ title }) {
             left: 0.5rem;
             width: auto;
             max-width: none;
+            max-height: calc(100dvh - 76px);
+            display: flex;
+            flex-direction: column;
           }
         }
 
         @media (max-width: 380px) {
           .gs-header-title {
             max-width: 38vw;
+          }
+        }
+
+        @media (max-height: 480px) and (orientation: landscape) {
+          .gs-notif-dropdown {
+            top: 52px;
+            max-height: calc(100dvh - 64px);
+          }
+          .gs-notif-list {
+            max-height: min(200px, 40dvh);
           }
         }
       `}</style>

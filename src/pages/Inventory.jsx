@@ -1,14 +1,105 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../supabase';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
-import { Plus, Search, Edit, Trash2, X, Loader2, Boxes, Layers, Package, Wallet } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, X, Loader2, Boxes, Layers, Package, Wallet, ChevronDown, PackageSearch, Download } from 'lucide-react';
 import { formatCurrency } from '../utils/helpers';
 import '../styles/quotations.css';
 import '../styles/inventory.css';
 
-// A fixed pick-list, not free text — keeps unit naming consistent across items.
 const UNIT_OPTIONS = ['NOS', 'sq-feet', 'meter', 'feet', 'bundle'];
+
+function CategoryCombobox({ value, onChange, options }) {
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(-1);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const onDocMouseDown = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocMouseDown);
+    return () => document.removeEventListener('mousedown', onDocMouseDown);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter(c => c.toLowerCase().includes(q));
+  }, [value, options]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setOpen(true);
+      setHighlight(h => Math.min(h + 1, filtered.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlight(h => Math.max(h - 1, 0));
+    } else if (e.key === 'Enter') {
+      if (open && highlight >= 0 && filtered[highlight]) {
+        e.preventDefault();
+        onChange(filtered[highlight]);
+        setOpen(false);
+        setHighlight(-1);
+      } else {
+        setOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+    }
+  };
+
+  const selectOption = (cat) => {
+    onChange(cat);
+    setOpen(false);
+    setHighlight(-1);
+  };
+
+  return (
+    <div className="inv-combo" ref={wrapRef}>
+      <div className={`inv-combo-input-wrap${open ? ' open' : ''}`}>
+        <input
+          type="text"
+          className="input-field inv-combo-input"
+          value={value}
+          autoComplete="off"
+          placeholder="Type or pick a category"
+          onChange={(e) => { onChange(e.target.value); setOpen(true); setHighlight(-1); }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={handleKeyDown}
+        />
+        <ChevronDown
+          size={15}
+          className="inv-combo-chevron"
+          onClick={() => setOpen(o => !o)}
+        />
+      </div>
+      {open && (
+        <div className="inv-combo-dropdown">
+          {filtered.length > 0 ? (
+            filtered.map((cat, i) => (
+              <button
+                type="button"
+                key={cat}
+                className={`inv-combo-option${i === highlight ? ' active' : ''}${cat === value ? ' selected' : ''}`}
+                onMouseDown={(e) => e.preventDefault()}
+                onMouseEnter={() => setHighlight(i)}
+                onClick={() => selectOption(cat)}
+              >
+                {cat}
+              </button>
+            ))
+          ) : (
+            <div className="inv-combo-empty">
+              {value.trim() ? `"${value.trim()}" will be added as a new category` : 'No categories yet — start typing to create one'}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Inventory() {
   const [items, setItems] = useState([]);
@@ -16,12 +107,10 @@ export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
 
-  // Modal Controls
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Form States
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [quantity, setQuantity] = useState(0);
@@ -118,23 +207,50 @@ export default function Inventory() {
     }
   };
 
-  // Categories are whatever the user has actually typed so far — nothing predefined.
+  const handleExportCSV = () => {
+    const headers = ['Item Specification', 'Category', 'Quantity', 'Unit', 'Price', 'Total Value'];
+    const escapeCell = (val) => {
+      const s = String(val ?? '');
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const rows = filteredItems.map(item => {
+      const qty = parseFloat(item.quantity_available) || 0;
+      const rate = parseFloat(item.selling_rate) || 0;
+      return [
+        item.name,
+        item.category || '',
+        qty,
+        item.unit || '',
+        rate.toFixed(2),
+        (qty * rate).toFixed(2),
+      ];
+    });
+    const csvContent = [headers, ...rows].map(r => r.map(escapeCell).join(',')).join('\r\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10);
+    const scope = categoryFilter === 'All' ? 'all' : categoryFilter.toLowerCase().replace(/\s+/g, '-');
+    link.href = url;
+    link.download = `inventory-${scope}-${stamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const categoryOptions = useMemo(() => {
     const set = new Set();
     items.forEach(i => { if (i.category && i.category.trim()) set.add(i.category.trim()); });
     return Array.from(set).sort();
   }, [items]);
 
-  // Filter listings — an item with no category only ever shows under "All",
-  // never under a specific category pill.
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
-  // Cards reflect whatever's currently filtered — switch category and the
-  // numbers recalc for just that slice, not the whole inventory.
   const summary = useMemo(() => {
     const totalQty = filteredItems.reduce((sum, i) => sum + (parseFloat(i.quantity_available) || 0), 0);
     const totalValue = filteredItems.reduce((sum, i) => sum + (parseFloat(i.quantity_available) || 0) * (parseFloat(i.selling_rate) || 0), 0);
@@ -155,7 +271,6 @@ export default function Inventory() {
         <Header title="Inventory" />
 
         <main className="gs-main">
-          {/* Summary cards */}
           <div className="inv-summary-scope">
             Showing stats for: <strong>{categoryFilter === 'All' ? 'All Categories' : categoryFilter}</strong>
           </div>
@@ -190,7 +305,6 @@ export default function Inventory() {
             </div>
           </div>
 
-          {/* Toolbar */}
           <div className="inv-toolbar animate-fade">
             <div className="inv-search-box">
               <Search size={15} style={{ color: 'var(--text-muted)' }} />
@@ -213,58 +327,63 @@ export default function Inventory() {
               ))}
             </div>
 
-            <button className="btn-primary" onClick={openCreateModal} style={{ marginLeft: 'auto' }}>
-              <Plus size={16} />
-              <span>Add Stock Item</span>
-            </button>
+            <div className="inv-toolbar-actions">
+              <button className="btn-secondary" onClick={handleExportCSV} disabled={filteredItems.length === 0}>
+                <Download size={15} />
+                <span>Export CSV</span>
+              </button>
+              <button className="btn-primary" onClick={openCreateModal}>
+                <Plus size={16} />
+                <span>Add Stock Item</span>
+              </button>
+            </div>
           </div>
 
-          {/* Table */}
           {loading ? (
             <div style={{ display: 'flex', minHeight: '200px', alignItems: 'center', justifyContent: 'center' }}>
               <Loader2 size={30} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent)' }} />
             </div>
           ) : filteredItems.length === 0 ? (
-            <div className="glass-card text-center" style={{ padding: '3rem 1.5rem', color: 'var(--text-muted)' }}>
-              No inventory items found. Add items to track decorator stock.
+            <div className="inv-empty animate-fade">
+              <div className="inv-empty-icon"><PackageSearch size={26} /></div>
+              <p>No inventory items found. Add items to track decorator stock.</p>
             </div>
           ) : (
+            <>
+            <p className="inv-scroll-hint">Swipe to see more →</p>
             <div className="inv-table-wrap animate-fade">
-              <table className="app-table">
+              <table className="inv-items-table">
                 <thead>
                   <tr>
                     <th>Item Specification</th>
-                    <th>Category</th>
+                    <th style={{ textAlign: 'center' }}>Category</th>
                     <th style={{ textAlign: 'center' }}>Quantity</th>
-                    <th>Unit</th>
-                    <th>Price</th>
+                    <th style={{ textAlign: 'center' }}>Unit</th>
+                    <th style={{ textAlign: 'right' }}>Price</th>
+                    <th style={{ textAlign: 'right' }}>Total Value</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredItems.map(item => (
                     <tr key={item.id}>
-                      <td style={{ fontWeight: 600 }}>{item.name}</td>
+                      <td className="inv-name-cell">{item.name}</td>
+                      <td className="inv-cat-cell">{item.category || '—'}</td>
+                      <td className="inv-qty-cell">{item.quantity_available}</td>
+                      <td className="inv-unit-cell">{item.unit || '—'}</td>
+                      <td className="inv-price-cell">{formatCurrency(item.selling_rate)}</td>
+                      <td className="inv-total-cell">{formatCurrency((parseFloat(item.quantity_available) || 0) * (parseFloat(item.selling_rate) || 0))}</td>
                       <td>
-                        {item.category ? <span className="badge badge-neutral">{item.category}</span> : <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                      </td>
-                      <td style={{ textAlign: 'center', fontWeight: 700 }}>{item.quantity_available}</td>
-                      <td>{item.unit || '—'}</td>
-                      <td style={{ fontWeight: 600, color: 'var(--primary)' }}>{formatCurrency(item.selling_rate)}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
+                        <div className="inv-row-actions">
                           <button
-                            className="btn-secondary"
-                            style={{ padding: '0.35rem', borderRadius: '6px' }}
+                            className="inv-icon-btn edit"
                             title="Edit Details"
                             onClick={() => openEditModal(item)}
                           >
                             <Edit size={13} />
                           </button>
-
                           <button
-                            className="btn-secondary"
-                            style={{ padding: '0.35rem', borderRadius: '6px', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}
+                            className="inv-icon-btn danger"
                             title="Delete Item"
                             onClick={() => handleDeleteItem(item.id)}
                           >
@@ -277,9 +396,9 @@ export default function Inventory() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
 
-          {/* Add / Edit modal */}
           {showCreateModal && (
             <div className="modal-overlay">
               <div className="modal-content">
@@ -307,17 +426,7 @@ export default function Inventory() {
                     <div className="form-grid">
                       <div className="form-group">
                         <label>Category</label>
-                        <input
-                          type="text"
-                          className="input-field"
-                          list="inv-category-options"
-                          value={category}
-                          onChange={(e) => setCategory(e.target.value)}
-                          placeholder="Type or pick a category"
-                        />
-                        <datalist id="inv-category-options">
-                          {categoryOptions.map(cat => <option key={cat} value={cat} />)}
-                        </datalist>
+                        <CategoryCombobox value={category} onChange={setCategory} options={categoryOptions} />
                       </div>
                       <div className="form-group">
                         <label>Measurement Unit</label>

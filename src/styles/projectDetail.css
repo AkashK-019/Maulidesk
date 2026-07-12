@@ -1,24 +1,85 @@
-/* ═══════════════════════════════
-   PROJECT DETAIL PAGE STYLES
-   src/styles/projectDetail.css
+.pd-page {
+  --pd-accent: #0d9488;
+  --pd-accent-dark: #0f766e;
+  --pd-accent-soft: #e6f7f5;
+  --pd-accent-ring: rgba(13, 148, 136, 0.22);
 
-   Responsive strategy: container queries, not viewport
-   breakpoints. Every section below reflows based on the
-   width of its own panel (.pd-cq), which stays accurate
-   whether the sidebar is expanded, collapsed, or the
-   screen is a phone — a plain @media breakpoint can't
-   tell those apart, a container query can.
-═══════════════════════════════ */
+  --pd-ink: var(--text-primary, #1e2530);
+  --pd-ink-soft: var(--text-secondary, #3f4b54);
+  --pd-muted: var(--text-muted, #7c8a92);
 
-/* ── Header ── */
+  --pd-card: var(--card-bg, #ffffff);
+  --pd-surface: var(--surface, #f6f7fb);
+  --pd-border: var(--border-color, #e7e9f1);
+
+  --pd-radius-lg: 18px;
+  --pd-radius-md: 14px;
+  --pd-radius-sm: 10px;
+
+  --pd-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --pd-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --pd-shadow-md: 0 10px 30px -12px rgba(15, 23, 42, 0.18);
+  --pd-shadow-glow: 0 8px 22px -6px var(--pd-accent-ring);
+
+  --pd-green: #10b981;
+  --pd-green-soft: #ecfdf5;
+  --pd-red: #ef4444;
+  --pd-red-soft: #fef2f2;
+  --pd-amber: #f59e0b;
+  --pd-amber-soft: #fffbeb;
+  --pd-blue: #2563eb;
+  --pd-blue-soft: #eff6ff;
+  --pd-violet: #7c3aed;
+  --pd-violet-soft: #f5f3ff;
+
+  color: var(--pd-ink);
+}
+
+/* ═══ Compact icon-only action row (used for the payment history table's
+   Print / Download / Share / Delete buttons) ═══ */
+.pd-icon-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end; flex-wrap: nowrap; }
+.pd-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--pd-border);
+  background: var(--pd-surface);
+  color: var(--pd-ink-soft);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.pd-icon-btn:hover { background: #fff; color: var(--pd-ink); box-shadow: var(--pd-shadow-xs); transform: translateY(-1px); }
+.pd-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.pd-icon-btn.pdf { border-color: rgba(37, 99, 235, 0.3); color: var(--pd-blue); }
+.pd-icon-btn.pdf:hover { background: var(--pd-blue-soft); }
+.pd-icon-btn.wa { border-color: rgba(16, 185, 129, 0.3); color: #059669; }
+.pd-icon-btn.wa:hover { background: var(--pd-green-soft); }
+.pd-icon-btn.danger { border-color: rgba(239, 68, 68, 0.3); color: var(--pd-red); }
+.pd-icon-btn.danger:hover { background: var(--pd-red-soft); }
+
+/* ═══ Header ═══ */
 .pd-header {
   container-type: inline-size;
   container-name: pd-header;
-  background: var(--card-bg, #ffffff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 14px;
-  padding: clamp(1rem, 3vw, 1.5rem);
-  margin-bottom: clamp(1rem, 2.5vw, 1.25rem);
+  position: relative;
+  background: var(--pd-card);
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius-lg);
+  padding: clamp(1.1rem, 3vw, 1.65rem) clamp(1.1rem, 3vw, 1.75rem);
+  margin-bottom: clamp(1rem, 2.5vw, 1.35rem);
+  box-shadow: var(--pd-shadow-sm);
+  overflow: hidden;
+}
+.pd-header::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--pd-accent), #dba179 55%, transparent);
 }
 
 .pd-header-top {
@@ -27,26 +88,31 @@
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
 }
 
 .pd-back-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: transparent;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  padding: 0.45rem 0.85rem;
-  font-size: 0.82rem;
-  color: var(--text-muted, #64748b);
+  background: var(--pd-accent-soft);
+  border: 1px solid rgba(13, 148, 136, 0.22);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem 0.4rem 0.7rem;
+  font-size: 0.81rem;
+  font-weight: 700;
+  color: var(--pd-accent-dark);
   cursor: pointer;
-  transition: all 0.18s;
+  transition: all 0.18s ease;
   flex-shrink: 0;
+  align-self: flex-start;
 }
 .pd-back-btn:hover {
-  background: var(--surface, #f8fafc);
-  color: var(--text-primary, #1e293b);
+  background: var(--pd-accent);
+  border-color: var(--pd-accent);
+  color: #fff;
+  transform: translateX(-2px);
+  box-shadow: var(--pd-shadow-xs);
 }
 
 .pd-header-actions {
@@ -57,23 +123,24 @@
 }
 
 .pd-edit-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: transparent;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  padding: 0.45rem 0.85rem;
+  background: var(--pd-surface);
+  border: 1px solid var(--pd-border);
+  border-radius: 999px;
+  padding: 0.45rem 0.95rem;
   font-size: 0.82rem;
-  color: var(--text-muted, #64748b);
+  font-weight: 600;
+  color: var(--pd-ink-soft);
   cursor: pointer;
-  transition: all 0.18s;
+  transition: all 0.18s ease;
   white-space: nowrap;
 }
 .pd-edit-btn:hover {
-  background: rgba(232,116,28,0.08);
-  border-color: rgba(232,116,28,0.3);
-  color: #e8741c;
+  background: var(--pd-accent-soft);
+  border-color: var(--pd-accent);
+  color: var(--pd-accent-dark);
 }
 
 .pd-project-info {
@@ -83,97 +150,69 @@
   min-width: 0;
 }
 
-.pd-project-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #e8741c22, #e8741c44);
-  color: #e8741c;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
 .pd-project-name {
-  font-size: clamp(1.05rem, 1.4vw + 0.7rem, 1.25rem);
-  font-weight: 700;
-  color: var(--text-primary, #1e293b);
-  margin: 0 0 0.35rem 0;
+  font-size: clamp(1.1rem, 1.4vw + 0.7rem, 1.4rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--pd-ink);
+  margin: 0 0 0.4rem 0;
   overflow-wrap: break-word;
+  line-height: 1.25;
 }
 
 .pd-project-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem 0.9rem;
-  font-size: 0.8rem;
-  color: var(--text-muted, #64748b);
+  gap: 0.5rem 1rem;
+  font-size: 0.81rem;
+  color: var(--pd-muted);
 }
 .pd-project-meta span {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
 }
+.pd-project-meta svg { color: var(--pd-accent); flex-shrink: 0; }
 
-/* Header narrows: stack actions under the back button, let status pill grow */
+/* Header narrows: back link hugs the left, status pill + edit button
+   sit together at their natural (content) width instead of being
+   stretched edge-to-edge — stretching left the status pill's short
+   label looking lost inside an oversized button. */
 @container pd-header (max-width: 460px) {
-  .pd-header-top {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .pd-header-actions {
-    justify-content: space-between;
-  }
-  .prj-status-pill {
-    flex: 1;
-  }
-  .pd-edit-btn {
-    flex: 1;
-    justify-content: center;
-  }
+  .pd-header-top { flex-direction: column; align-items: stretch; }
+  .pd-header-actions { justify-content: flex-start; }
+  .prj-status-pill { flex: 0 0 auto; }
+  .pd-edit-btn { flex: 0 0 auto; }
 }
 
-/* ── Status pill — scoped override for this page only.
-   A plain <select> can't be restyled much across browsers,
-   so we hide the native chrome and paint a CSS-only chevron
-   in the same color as the status, instead of leaving the
-   browser's default grey dropdown arrow sitting on top of it. ── */
+/* ── Status pill — hide native <select> chrome, paint our own chevron
+   in the same color as the status text ── */
 .pd-status-select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
   border: 1.5px solid currentColor;
   border-radius: 999px;
-  padding: 0.4rem 2.1rem 0.4rem 1rem;
-  font-size: 0.78rem;
+  padding: 0.42rem 1.85rem 0.42rem 0.95rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   cursor: pointer;
   background-image:
     linear-gradient(45deg, transparent 50%, currentColor 50%),
     linear-gradient(135deg, currentColor 50%, transparent 50%);
-  background-position:
-    calc(100% - 17px) center,
-    calc(100% - 12px) center;
+  background-position: calc(100% - 15px) center, calc(100% - 10px) center;
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
   transition: box-shadow 0.15s ease, transform 0.1s ease;
 }
-.pd-status-select:hover {
-  box-shadow: 0 3px 8px rgba(0,0,0,0.12);
-}
-.pd-status-select:active {
-  transform: scale(0.97);
-}
-.pd-status-select:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
-}
+.pd-status-select:hover { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.13); }
+.pd-status-select:active { transform: scale(0.97); }
+.pd-status-select:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
-/* ── Tabs — horizontally scrolling strip, never stacked ── */
+/* ═══ Tabs ═══ */
 .pd-tabs-scroll {
   position: relative;
   margin-bottom: clamp(1rem, 2.5vw, 1.25rem);
@@ -184,14 +223,15 @@
   container-name: pd-tabbar;
   display: flex;
   gap: 4px;
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 12px;
-  padding: 4px;
+  background: var(--pd-card);
+  border: 1px solid var(--pd-border);
+  border-radius: 14px;
+  padding: 5px;
   overflow-x: auto;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  box-shadow: var(--pd-shadow-xs);
 }
 .pd-tabs::-webkit-scrollbar { display: none; }
 
@@ -202,501 +242,533 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 0.6rem 1rem;
+  padding: 0.65rem 1rem;
   border: none;
-  border-radius: 9px;
+  border-radius: 10px;
   background: transparent;
-  color: var(--text-muted, #64748b);
+  color: var(--pd-muted);
   font-size: 0.83rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.18s;
+  transition: all 0.18s ease;
   scroll-snap-align: start;
   white-space: nowrap;
 }
-.pd-tab-btn:hover {
-  background: var(--surface, #f8fafc);
-  color: var(--text-primary, #1e293b);
-}
+.pd-tab-btn:hover { background: var(--pd-surface); color: var(--pd-ink); }
 .pd-tab-btn.active {
-  background: #e8741c;
-  color: #ffffff;
-  font-weight: 700;
-  border: 1px solid #e8741c;
-  box-shadow: 0 4px 12px rgba(232,116,28,0.32);
+  background: linear-gradient(135deg, var(--pd-accent), var(--pd-accent-dark));
+  color: #fff;
+  box-shadow: var(--pd-shadow-glow);
   transform: translateY(-1px);
 }
-.pd-tab-btn.active:hover {
-  background: #d9680f;
-  color: #ffffff;
-}
-.pd-tab-btn.active .pd-tab-count {
-  background: rgba(255,255,255,0.28);
-  color: #ffffff;
-}
+.pd-tab-btn.active:hover { filter: brightness(1.03); }
+.pd-tab-btn.active .pd-tab-count { background: rgba(255, 255, 255, 0.28); color: #fff; }
 
 .pd-tab-count {
-  background: rgba(232,116,28,0.15);
-  color: #e8741c;
+  background: var(--pd-accent-soft);
+  color: var(--pd-accent-dark);
   border-radius: 10px;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 1px 7px;
   min-width: 18px;
   text-align: center;
 }
-.pd-tab-btn:not(.active) .pd-tab-count {
-  background: var(--surface, #f1f5f9);
-  color: var(--text-muted, #94a3b8);
-}
+.pd-tab-btn:not(.active) .pd-tab-count { background: var(--pd-surface); color: var(--pd-muted); }
 
-/* Once the tab strip can't fit three equal-width tabs comfortably,
-   let each tab size to its content and scroll instead of squeezing text */
 @container pd-tabbar (max-width: 420px) {
-  .pd-tab-btn {
-    flex: 0 0 auto;
-    padding: 0.6rem 0.85rem;
-  }
+  .pd-tab-btn { flex: 0 0 auto; padding: 0.6rem 0.85rem; }
 }
 
-/* Edge fade so it's visually obvious the strip scrolls */
 .pd-tabs-scroll::after {
   content: '';
   position: absolute;
-  top: 4px;
-  bottom: 4px;
-  right: 0;
-  width: 28px;
-  border-radius: 0 12px 12px 0;
-  background: linear-gradient(to right, transparent, var(--card-bg, #fff));
+  top: 5px; bottom: 5px; right: 0;
+  width: 30px;
+  border-radius: 0 14px 14px 0;
+  background: linear-gradient(to right, transparent, var(--pd-card));
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s;
 }
-@container pd-tabbar (max-width: 420px) {
-  .pd-tabs-scroll::after { opacity: 1; }
-}
+@container pd-tabbar (max-width: 420px) { .pd-tabs-scroll::after { opacity: 1; } }
 
-/* ── Tab Content wrapper — this is the container-query anchor
-      for everything rendered inside a tab panel ── */
+/* ═══ Tab content wrapper — container-query anchor for panels ═══ */
 .pd-tab-content {
   container-type: inline-size;
   container-name: pd-panel;
   display: flex;
   flex-direction: column;
-  gap: clamp(0.75rem, 2vw, 1rem);
+  gap: clamp(0.85rem, 2vw, 1.1rem);
   min-width: 0;
 }
 
-/* ── Section bar (title + actions row) ── */
+/* ═══ Section bar (title + status + actions) ═══ */
 .pd-section-bar {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 12px;
-  padding: clamp(0.85rem, 2.5vw, 1rem) clamp(1rem, 3vw, 1.25rem);
+  gap: 0.85rem;
+  background: var(--pd-card);
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius-md);
+  padding: clamp(0.9rem, 2.5vw, 1.1rem) clamp(1.05rem, 3vw, 1.3rem);
+  box-shadow: var(--pd-shadow-xs);
 }
 
 .pd-section-title {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 0.97rem;
-  font-weight: 700;
-  color: var(--text-primary, #1e293b);
-  margin: 0 0 6px 0;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--pd-ink);
+  margin: 0 0 7px 0;
 }
+.pd-section-title svg { color: var(--pd-accent); }
 
 .pd-status-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 0.72rem;
-  font-weight: 600;
-  padding: 2px 10px;
+  font-weight: 700;
+  padding: 3px 11px;
   border-radius: 20px;
 }
 
-/* ── Action buttons (Print / PDF / WhatsApp) ── */
-.pd-action-group {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
+/* ═══ Action buttons (Print / PDF / WhatsApp) ═══ */
+.pd-action-group { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .pd-action-btn {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 0.45rem 0.9rem;
-  border-radius: 8px;
-  border: 1px solid var(--border-color, #e5e7eb);
-  background: var(--surface, #f8fafc);
-  color: var(--text-secondary, #475569);
+  gap: 6px;
+  padding: 0.48rem 0.95rem;
+  border-radius: 9px;
+  border: 1px solid var(--pd-border);
+  background: var(--pd-surface);
+  color: var(--pd-ink-soft);
   font-size: 0.78rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.18s;
+  transition: all 0.18s ease;
 }
-.pd-action-btn:hover { background: #f1f5f9; color: var(--text-primary, #1e293b); }
-.pd-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.pd-action-btn.pdf { border-color: rgba(37,99,235,0.3); color: #2563eb; }
-.pd-action-btn.pdf:hover { background: rgba(37,99,235,0.06); }
-.pd-action-btn.wa { border-color: rgba(16,185,129,0.3); color: #059669; }
-.pd-action-btn.wa:hover { background: rgba(16,185,129,0.06); }
+.pd-action-btn:hover { background: #fff; color: var(--pd-ink); box-shadow: var(--pd-shadow-xs); transform: translateY(-1px); }
+.pd-action-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.pd-action-btn.pdf { border-color: rgba(37, 99, 235, 0.3); color: var(--pd-blue); }
+.pd-action-btn.pdf:hover { background: var(--pd-blue-soft); }
+.pd-action-btn.wa { border-color: rgba(16, 185, 129, 0.3); color: #059669; }
+.pd-action-btn.wa:hover { background: var(--pd-green-soft); }
 
-/* Panel too narrow for icon + label buttons: collapse to icon-only,
-   the title (title="Print" etc.) still gives a tooltip / a11y name */
 @container pd-panel (max-width: 380px) {
   .pd-action-btn span { display: none; }
-  .pd-action-btn {
-    padding: 0.5rem;
-    width: 34px;
-    height: 34px;
-    justify-content: center;
-  }
+  .pd-action-btn { padding: 0.5rem; width: 34px; height: 34px; justify-content: center; }
 }
 
-/* ── Info grid (3 cards) — fluid, not a fixed breakpoint ── */
+/* ═══ Info grid (client / event / amount cards) ═══ */
 .pd-info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+  gap: 0.85rem;
 }
 
 .pd-info-card {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 12px;
-  padding: 1rem 1.1rem;
+  background: var(--pd-card);
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius-md);
+  padding: 1.05rem 1.15rem;
   min-width: 0;
+  box-shadow: var(--pd-shadow-xs);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
 }
+.pd-info-card:hover { box-shadow: var(--pd-shadow-sm); border-color: #dfe3ee; }
 
 .pd-info-label {
-  font-size: 0.68rem;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.67rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted, #94a3b8);
-  margin: 0 0 6px 0;
+  letter-spacing: 0.08em;
+  color: var(--pd-accent-dark);
+  margin: 0 0 8px 0;
 }
 .pd-info-val {
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   font-weight: 700;
-  color: var(--text-primary, #1e293b);
+  color: var(--pd-ink);
   margin: 0 0 5px 0;
   overflow-wrap: break-word;
 }
 .pd-info-meta {
   display: flex;
   align-items: flex-start;
-  gap: 4px;
-  font-size: 0.78rem;
-  color: var(--text-muted, #64748b);
-  margin: 3px 0;
+  gap: 5px;
+  font-size: 0.79rem;
+  color: var(--pd-ink-soft);
+  margin: 4px 0;
   overflow-wrap: anywhere;
 }
-.pd-info-meta svg { flex-shrink: 0; margin-top: 2px; }
+.pd-info-meta svg { flex-shrink: 0; margin-top: 2px; color: var(--pd-muted); }
 
 .pd-amount-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.8rem;
-  padding: 3px 0;
-  color: var(--text-secondary, #475569);
-  border-bottom: 1px dashed rgba(0,0,0,0.06);
+  font-size: 0.81rem;
+  padding: 4px 0;
+  color: var(--pd-ink-soft);
+  border-bottom: 1px dashed var(--pd-border);
   gap: 0.5rem;
 }
-.pd-amount-row strong { color: var(--text-primary, #1e293b); }
+.pd-amount-row strong { color: var(--pd-ink); font-weight: 700; }
 .pd-amount-row.grand {
-  border-top: 1.5px solid var(--border-color, #e5e7eb);
+  border-top: 1.5px solid var(--pd-border);
   border-bottom: none;
-  margin-top: 4px;
-  padding-top: 6px;
-  font-weight: 700;
-  font-size: 0.88rem;
-  color: var(--text-primary, #1e293b);
+  margin-top: 5px;
+  padding-top: 8px;
+  font-weight: 800;
+  font-size: 0.94rem;
+  color: var(--pd-accent-dark);
 }
 
-/* ── Items table — becomes a stack of labeled rows in a narrow
-      panel instead of squeezing a 7-column table or forcing
-      the whole page to scroll sideways ── */
+/* ═══ Items table — IDENTICAL layout and styling on every screen size,
+   desktop or mobile. The wrap itself is the horizontal-scroll viewport;
+   the table never reflows into stacked cards or changes appearance.
+   Edge shadows fade in/out automatically as the user scrolls (pure CSS,
+   no JS) so there's always a clear hint that more columns exist. ═══ */
 .pd-items-table-wrap {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 12px;
-  overflow: hidden;
-}
+  position: relative;
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius-md);
+  box-shadow: var(--pd-shadow-xs);
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pd-border) transparent;
 
-.pd-items-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
+  /* Self-hiding scroll shadows: two "cover" gradients scroll with the
+     content (background-attachment: local) and mask the shadows near
+     the start/end of the table; two radial "shadow" gradients stay
+     pinned to the viewport (background-attachment: scroll). The net
+     effect is a shadow that only appears on the side(s) where there's
+     more content to reveal — and none at all if the table already
+     fits, e.g. on a wide desktop screen. */
+  background-image:
+    linear-gradient(to right, var(--pd-card) 50%, rgba(255, 255, 255, 0)),
+    linear-gradient(to left, var(--pd-card) 50%, rgba(255, 255, 255, 0)),
+    radial-gradient(farthest-side at 0 50%, rgba(15, 23, 42, 0.16), rgba(15, 23, 42, 0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(15, 23, 42, 0.16), rgba(15, 23, 42, 0));
+  background-position: left, right, left, right;
+  background-repeat: no-repeat;
+  background-color: var(--pd-card);
+  background-size: 32px 100%, 32px 100%, 12px 100%, 12px 100%;
+  background-attachment: local, local, scroll, scroll;
 }
+.pd-items-table-wrap::-webkit-scrollbar { height: 6px; }
+.pd-items-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.pd-items-table-wrap::-webkit-scrollbar-thumb { background: var(--pd-border); border-radius: 999px; }
+.pd-items-table-wrap::-webkit-scrollbar-thumb:hover { background: var(--pd-muted); }
+
+.pd-items-table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 0.83rem; }
 .pd-items-table th {
-  background: var(--surface, #f8fafc);
-  color: var(--text-muted, #64748b);
-  font-weight: 700;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.6rem 0.9rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-}
-.pd-items-table td {
-  padding: 0.65rem 0.9rem;
-  color: var(--text-secondary, #475569);
-  border-bottom: 1px solid var(--border-color, #f1f5f9);
-  vertical-align: top;
-}
-.pd-items-table tbody tr:last-child td { border-bottom: none; }
-.pd-items-table tbody tr:hover td { background: var(--surface, #fafafa); }
-.pd-items-table tfoot td { background: var(--surface, #f8fafc); border-top: 1.5px solid var(--border-color, #e5e7eb); }
-
-.pd-item-name {
-  display: block;
-  font-weight: 600;
-  color: var(--text-primary, #1e293b);
-}
-.pd-item-desc {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--text-muted, #94a3b8);
-  margin-top: 2px;
-}
-
-@container pd-panel (max-width: 520px) {
-  .pd-items-table thead { display: none; }
-  .pd-items-table, .pd-items-table tbody, .pd-items-table tfoot {
-    display: block;
-    width: 100%;
-  }
-  .pd-items-table tr {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.6rem 0.75rem;
-    padding: 0.9rem 1rem;
-    border-bottom: 1px solid var(--border-color, #f1f5f9);
-  }
-  .pd-items-table tbody tr:last-child { border-bottom: none; }
-
-  .pd-items-table td {
-    display: block;
-    padding: 0;
-    border: none;
-    font-size: 0.83rem;
-    color: var(--text-primary, #1e293b);
-  }
-
-  /* Numbered index badge — not useful as its own card row, drop it */
-  .pd-items-table td.pd-item-idx { display: none; }
-
-  /* Item/receipt title cell becomes the card header: full width, no label */
-  .pd-items-table td.pd-item-cell {
-    grid-column: 1 / -1;
-    padding-bottom: 0.6rem;
-    margin-bottom: 0.15rem;
-    border-bottom: 1px dashed var(--border-color, #e5e7eb);
-  }
-  .pd-items-table td.pd-item-cell .pd-item-name { font-size: 0.92rem; }
-
-  /* Every other data cell gets a small uppercase label above its value */
-  .pd-items-table td[data-label]::before {
-    content: attr(data-label);
-    display: block;
-    font-size: 0.62rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-muted, #94a3b8);
-    margin-bottom: 3px;
-  }
-
-  /* Amount is the payoff of the card — full width, larger, emphasized */
-  .pd-items-table td.pd-item-amount {
-    grid-column: 1 / -1;
-    text-align: left !important;
-    margin-top: 0.15rem;
-    padding-top: 0.6rem;
-    border-top: 1px solid var(--border-color, #e5e7eb);
-    font-weight: 700;
-    font-size: 0.95rem;
-  }
-
-  /* Action (e.g. print button) spans full width, right-aligned */
-  .pd-items-table td.pd-item-action {
-    grid-column: 1 / -1;
-    display: flex !important;
-    justify-content: flex-end;
-  }
-  .pd-items-table td.pd-item-action::before { content: none; }
-  .pd-items-table td.pd-item-action .pd-action-btn {
-    width: auto;
-    height: auto;
-    padding: 0.4rem 0.9rem;
-  }
-  .pd-items-table td.pd-item-action .pd-action-btn span { display: inline; }
-
-  /* Footer summary row (e.g. "Total Received") reads as a clean label/value line */
-  .pd-items-table tfoot tr.pd-table-total-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.85rem 1rem;
-    background: var(--surface, #f8fafc);
-  }
-  .pd-items-table tfoot td {
-    display: block;
-    padding: 0 !important;
-    border: none !important;
-  }
-}
-
-/* ── Notes box ── */
-.pd-notes-box {
-  background: rgba(248,250,252,0.8);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 10px;
-  padding: 0.85rem 1.1rem;
-}
-.pd-notes-label {
-  font-size: 0.68rem;
-  font-weight: 700;
+  background: var(--pd-surface);
+  color: var(--pd-muted);
+  font-weight: 800;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted, #94a3b8);
+  padding: 0.7rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--pd-border);
+  white-space: nowrap;
+}
+.pd-items-table td {
+  padding: 0.75rem 1rem;
+  color: var(--pd-ink-soft);
+  border-bottom: 1px solid #f1f2f7;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.pd-items-table tbody tr:last-child td { border-bottom: none; }
+.pd-items-table tbody tr:hover td { background: #fbfbfd; }
+.pd-items-table tfoot td { background: var(--pd-surface); border-top: 1.5px solid var(--pd-border); white-space: nowrap; }
+.pd-items-table tfoot tr.pd-table-total-row td { font-weight: 700; color: var(--pd-ink); }
+
+.pd-item-idx {
+  color: var(--pd-muted);
+  font-weight: 700;
+  font-size: 0.76rem;
+  width: 34px;
+}
+.pd-item-cell { min-width: 160px; white-space: normal; }
+.pd-item-name { display: block; font-weight: 700; color: var(--pd-ink); }
+.pd-item-desc { display: block; font-size: 0.73rem; color: var(--pd-muted); margin-top: 2px; white-space: normal; }
+.pd-item-amount { font-weight: 700; color: var(--pd-ink); white-space: nowrap; }
+.pd-item-action { white-space: nowrap; }
+
+/* Small "swipe to see more" hint — an optional <p className="pd-scroll-hint">
+   placed just above a .pd-items-table-wrap in the tab components. Hidden by
+   default; only shown once the panel is narrow enough that the table is
+   likely to overflow, so it never appears on desktop. */
+.pd-scroll-hint {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  margin: -0.3rem 0 0.1rem 0.1rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--pd-muted);
+}
+@container pd-panel (max-width: 560px) {
+  .pd-scroll-hint { display: flex; }
+}
+
+/* ═══ Notes box ═══ */
+.pd-notes-box {
+  background: var(--pd-accent-soft);
+  border: 1px solid rgba(13, 148, 136, 0.18);
+  border-radius: var(--pd-radius-sm);
+  padding: 0.9rem 1.15rem;
+}
+.pd-notes-label {
+  font-size: 0.67rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--pd-accent-dark);
   margin: 0 0 5px 0;
 }
 .pd-notes-text {
-  font-size: 0.83rem;
-  color: var(--text-secondary, #475569);
+  font-size: 0.84rem;
+  color: var(--pd-ink-soft);
   margin: 0;
   white-space: pre-line;
   overflow-wrap: break-word;
 }
 
-/* ── Progress banner ── */
+/* ═══ Empty state ═══ */
+.pd-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.9rem;
+  padding: 3rem 1.5rem;
+  background: var(--pd-card);
+  border: 1px dashed var(--pd-border);
+  border-radius: var(--pd-radius-lg);
+}
+.pd-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--pd-accent-soft);
+  color: var(--pd-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pd-empty p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--pd-muted);
+  max-width: 34ch;
+  line-height: 1.5;
+}
+
+/* ═══ Progress / paid banners ═══ */
 .pd-paid-banner {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(16,185,129,0.08);
-  border: 1px solid rgba(16,185,129,0.25);
-  border-radius: 10px;
-  padding: 0.7rem 1.1rem;
+  background: linear-gradient(135deg, var(--pd-green-soft), #ffffff);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--pd-radius-md);
+  padding: 0.8rem 1.2rem;
   color: #059669;
-  font-size: 0.88rem;
-  font-weight: 600;
+  font-size: 0.89rem;
+  font-weight: 700;
+  box-shadow: var(--pd-shadow-xs);
 }
 
 .pd-progress-banner {
-  background: rgba(245,158,11,0.06);
-  border: 1px solid rgba(245,158,11,0.2);
-  border-radius: 10px;
-  padding: 0.85rem 1.1rem;
+  background: linear-gradient(135deg, var(--pd-amber-soft), #ffffff);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--pd-radius-md);
+  padding: 0.95rem 1.2rem;
+  box-shadow: var(--pd-shadow-xs);
 }
 .pd-progress-top {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
-  color: var(--text-muted, #64748b);
-  margin-bottom: 6px;
+  font-size: 0.81rem;
+  font-weight: 600;
+  color: var(--pd-ink-soft);
+  margin-bottom: 8px;
   gap: 0.5rem;
 }
-.pd-progress-pct { font-weight: 600; color: #f59e0b; white-space: nowrap; }
+.pd-progress-pct { font-weight: 800; color: var(--pd-amber); white-space: nowrap; }
 .pd-progress-bar-bg {
-  height: 8px;
-  background: #f1f5f9;
-  border-radius: 8px;
+  height: 9px;
+  background: #fff;
+  border: 1px solid var(--pd-border);
+  border-radius: 999px;
   overflow: hidden;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .pd-progress-bar-fill {
   height: 100%;
-  border-radius: 8px;
-  transition: width 0.4s;
+  border-radius: 999px;
+  transition: width 0.45s ease, background 0.3s ease;
 }
 .pd-progress-nums {
   display: flex;
   justify-content: space-between;
-  font-size: 0.78rem;
-  color: var(--text-muted, #64748b);
+  font-size: 0.79rem;
+  color: var(--pd-ink-soft);
   flex-wrap: wrap;
   gap: 0.4rem 1rem;
 }
 
-/* ── Payment KPIs — fluid grid, no fixed 3-column breakpoint jump ── */
+/* ═══ Payment KPIs — icon-tile style, matching .prj-metric on the
+   Projects list page for visual consistency across the app ═══ */
 .pd-pay-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+  gap: 0.85rem;
 }
 .pd-pay-kpi {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--pd-card);
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius-md);
+  padding: 0.9rem 1.05rem;
   min-width: 0;
+  box-shadow: var(--pd-shadow-xs);
+  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
 }
-.pd-pay-kpi span { font-size: 0.72rem; color: var(--text-muted, #94a3b8); text-transform: uppercase; letter-spacing: 0.05em; }
-.pd-pay-kpi strong { font-size: 1.1rem; font-weight: 700; color: var(--text-primary, #1e293b); overflow-wrap: break-word; }
-.pd-pay-kpi.green { border-color: rgba(16,185,129,0.25); }
-.pd-pay-kpi.green strong { color: #10b981; }
-.pd-pay-kpi.red { border-color: rgba(239,68,68,0.25); }
-.pd-pay-kpi.red strong { color: #ef4444; }
-
-.pd-pay-progress-wrap {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
+.pd-pay-kpi:hover { box-shadow: var(--pd-shadow-sm); border-color: #dfe3ee; transform: translateY(-1px); }
+.pd-pay-kpi-icon {
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
-  padding: 0.85rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
+.pd-pay-kpi-body { display: flex; flex-direction: column; min-width: 0; }
+.pd-pay-kpi-val { font-size: 1.08rem; font-weight: 800; color: var(--pd-ink); line-height: 1.2; overflow-wrap: break-word; }
+.pd-pay-kpi-lbl { font-size: 0.68rem; color: var(--pd-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
 
-/* ── Receipt & mode badges ── */
+/* ═══ Receipt & mode badges ═══ */
 .pd-rcpt-label {
   display: inline-block;
-  background: rgba(232,116,28,0.1);
-  color: #e8741c;
+  background: var(--pd-accent-soft);
+  color: var(--pd-accent-dark);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+}
+.pd-mode-badge {
+  display: inline-block;
+  background: var(--pd-surface);
+  border: 1px solid var(--pd-border);
+  color: var(--pd-ink-soft);
   border-radius: 6px;
   font-size: 0.72rem;
   font-weight: 600;
   padding: 2px 8px;
 }
-.pd-mode-badge {
-  display: inline-block;
-  background: var(--surface, #f1f5f9);
-  color: var(--text-secondary, #475569);
-  border-radius: 6px;
-  font-size: 0.72rem;
-  padding: 2px 8px;
-}
 
-/* ── Spin animation ── */
+/* ═══ Misc shared bits ═══ */
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-/* ── Bottom-sheet modal (this page only, via .pd-modal) ──
-   On a roomy screen it behaves like a normal centered dialog.
-   Once height is tight (a phone), it becomes a sheet anchored
-   to the bottom with a drag handle, which is easier to reach
-   and dismiss one-handed than a floating centered box. ── */
+.pd-tab-content .glass-card {
+  background: var(--pd-card);
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius-lg);
+  box-shadow: var(--pd-shadow-xs);
+}
+
+/* ═══ Modal (.pd-modal) — always a properly contained popup: header and
+   footer stay fixed, only the body scrolls internally. Previously this
+   only applied inside the narrow-viewport media query below, so on a
+   normal desktop window with a tall form (e.g. Edit Project) the modal
+   could overflow past the bottom of the screen with no way to reach the
+   Save button. ═══ */
+/* Belt-and-braces: guarantee the Edit Project overlay is centered and
+   blurs the page behind it, regardless of whatever the shared global
+   .modal-overlay rule happens to do elsewhere in the app. */
+.modal-overlay:has(.pd-modal) {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
 .pd-modal {
   max-width: 560px;
+  width: 100%;
+  border-radius: var(--pd-radius-lg);
+  max-height: min(85vh, 720px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--pd-shadow-md);
+  animation: pd-pop-in 0.18s ease-out;
+}
+.pd-modal > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.pd-modal .modal-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.15rem 1.35rem;
+  border-bottom: 1px solid var(--pd-border);
+}
+.pd-modal .modal-header h3 { font-size: 1.05rem; font-weight: 800; color: var(--pd-ink); }
+.pd-modal .modal-header button {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 8px;
+  color: var(--pd-muted); transition: background 0.15s ease, color 0.15s ease;
+}
+.pd-modal .modal-header button:hover { background: var(--pd-surface); color: var(--pd-ink); }
+.pd-modal .modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 1.3rem 1.35rem; }
+.pd-modal .modal-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  padding: 1rem 1.35rem;
+  border-top: 1px solid var(--pd-border);
+  background: var(--pd-surface);
 }
 
 @media (max-width: 640px), (max-height: 700px) {
-  .modal-overlay:has(.pd-modal) {
-    align-items: flex-end;
-  }
+  .modal-overlay:has(.pd-modal) { align-items: flex-end; }
   .pd-modal {
     width: 100%;
     max-width: 100%;
@@ -704,33 +776,18 @@
     border-radius: 20px 20px 0 0;
     animation: pd-sheet-up 0.25s ease-out;
   }
-  .pd-modal .modal-header {
-    position: relative;
-    padding-top: 1.5rem;
-  }
+  .pd-modal .modal-header { position: relative; padding-top: 1.5rem; }
   .pd-modal .modal-header::before {
     content: '';
     position: absolute;
-    top: 8px;
-    left: 50%;
+    top: 8px; left: 50%;
     transform: translateX(-50%);
-    width: 36px;
-    height: 4px;
+    width: 36px; height: 4px;
     border-radius: 4px;
-    background: var(--border-color, #e5e7eb);
+    background: var(--pd-border);
   }
-  .pd-modal .modal-body {
-    max-height: calc(88dvh - 130px);
-    overflow-y: auto;
-  }
-  .pd-modal .modal-footer {
-    flex-direction: column-reverse;
-    gap: 0.5rem;
-  }
-  .pd-modal .modal-footer button {
-    width: 100%;
-    justify-content: center;
-  }
+  .pd-modal .modal-footer { flex-direction: column-reverse; gap: 0.5rem; }
+  .pd-modal .modal-footer button { width: 100%; justify-content: center; }
 }
 
 @keyframes pd-sheet-up {
@@ -740,11 +797,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pd-modal { animation: none; }
+  .pd-back-btn, .pd-action-btn, .pd-progress-bar-fill { transition: none; }
 }
 
-/* ── Fallback for browsers without container query support ──
-   (progressive enhancement — the layout still works, just
-   reflows at viewport width instead of panel width) ── */
+/* ═══ Fallback for browsers without container query support ═══ */
 @supports not (container-type: inline-size) {
   @media (max-width: 640px) {
     .pd-pay-kpis { grid-template-columns: 1fr; }
@@ -752,4 +808,143 @@
     .pd-action-group { width: 100%; }
     .pd-action-btn span { display: none; }
   }
+}
+
+/* ═══ Animate-in ═══ */
+.animate-fade { animation: pd-fade-in 0.35s ease both; }
+@keyframes pd-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade { animation: none; }
+}
+
+/* ═══ Record Payment popup — fully self-contained, does NOT reuse the
+   shared .modal-overlay / .modal-content system. It sets its own fixed,
+   full-viewport, centered overlay so nothing else on the page (or any
+   other global modal rule) can affect its position or scrolling. The
+   card is a flex column with a fixed head + foot and a body that's the
+   only part that scrolls. ═══ */
+.pd-rcpt-overlay {
+  /* Re-declare the design-token variables here because this element is
+     rendered via createPortal(document.body), which detaches it from the
+     .pd-page DOM subtree where these vars are normally defined. CSS custom
+     properties inherit through the real DOM tree, not the React tree, so
+     without this the modal loses all its colors, radii, and shadows. */
+  --pd-accent: #0d9488;
+  --pd-accent-dark: #0f766e;
+  --pd-accent-soft: #e6f7f5;
+  --pd-accent-ring: rgba(13, 148, 136, 0.22);
+
+  --pd-ink: var(--text-primary, #1e2530);
+  --pd-ink-soft: var(--text-secondary, #3f4b54);
+  --pd-muted: var(--text-muted, #7c8a92);
+
+  --pd-card: var(--card-bg, #ffffff);
+  --pd-surface: var(--surface, #f6f7fb);
+  --pd-border: var(--border-color, #e7e9f1);
+
+  --pd-radius-lg: 18px;
+  --pd-radius-md: 14px;
+  --pd-radius-sm: 10px;
+
+  --pd-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --pd-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --pd-shadow-md: 0 10px 30px -12px rgba(15, 23, 42, 0.18);
+  --pd-shadow-glow: 0 8px 22px -6px var(--pd-accent-ring);
+
+  --pd-green: #10b981;
+  --pd-green-soft: #ecfdf5;
+  --pd-red: #ef4444;
+  --pd-red-soft: #fef2f2;
+  --pd-amber: #f59e0b;
+  --pd-amber-soft: #fffbeb;
+  --pd-blue: #2563eb;
+  --pd-blue-soft: #eff6ff;
+  --pd-violet: #7c3aed;
+  --pd-violet-soft: #f5f3ff;
+
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+.pd-rcpt-card {
+  width: 100%;
+  max-width: 480px;
+  max-height: min(85vh, 680px);
+  background: var(--pd-card);
+  border-radius: var(--pd-radius-lg);
+  box-shadow: var(--pd-shadow-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: pd-pop-in 0.18s ease-out;
+}
+.pd-rcpt-form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.pd-rcpt-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.3rem;
+  border-bottom: 1px solid var(--pd-border);
+}
+.pd-rcpt-head h3 { margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--pd-ink); }
+.pd-rcpt-head button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--pd-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.pd-rcpt-head button:hover { background: var(--pd-surface); color: var(--pd-ink); }
+.pd-rcpt-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.3rem;
+}
+.pd-rcpt-foot {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  padding: 1rem 1.3rem;
+  border-top: 1px solid var(--pd-border);
+  background: var(--pd-surface);
+}
+
+@keyframes pd-pop-in {
+  from { transform: scale(0.97); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  .pd-rcpt-overlay { align-items: flex-end; padding: 0; }
+  .pd-rcpt-card {
+    max-width: 100%;
+    max-height: 90dvh;
+    border-radius: 20px 20px 0 0;
+    animation: pd-sheet-up 0.25s ease-out;
+  }
+  .pd-rcpt-foot { flex-direction: column-reverse; gap: 0.5rem; }
+  .pd-rcpt-foot button { width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-rcpt-card { animation: none; }
 }

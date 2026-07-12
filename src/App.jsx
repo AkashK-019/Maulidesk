@@ -7,10 +7,10 @@ import Dashboard     from './pages/Dashboard';
 import Quotations    from './pages/Quotations';
 import Inventory     from './pages/Inventory';
 import Labour        from './pages/Labour';
-import Attendance    from './pages/Attendance';
 import Settings      from './pages/Settings';
 import Projects      from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
+import Finance      from './pages/Finance';
 
 export default function App() {
   return (
@@ -25,7 +25,7 @@ export default function App() {
           <Route path="/quotations"      element={<ProtectedRoute pageKey="quotations"><Quotations /></ProtectedRoute>} />
           <Route path="/inventory"       element={<ProtectedRoute pageKey="inventory"><Inventory /></ProtectedRoute>} />
           <Route path="/labour"          element={<ProtectedRoute pageKey="labour"><Labour /></ProtectedRoute>} />
-          <Route path="/attendance"      element={<ProtectedRoute pageKey="attendance"><Attendance /></ProtectedRoute>} />
+          <Route path="/finance"         element={<ProtectedRoute pageKey="finance"><Finance /></ProtectedRoute>} />
           <Route path="/settings"        element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
