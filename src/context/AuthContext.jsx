@@ -4,6 +4,8 @@ import { supabase } from '../supabase';
 
 const AuthContext = createContext({});
 
+const DEFAULT_FALLBACK_PAGES = ['dashboard', 'projects', 'quotations', 'inventory', 'labour', 'finance'];
+
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
   const [profile, setProfile] = useState(null);
@@ -21,18 +23,18 @@ export function AuthProvider({ children }) {
       if (data) {
         setProfile(data);
       } else {
-        // Fallback fallback if profiles row is not found or yet created
+        // Fallback if profiles row is not found or yet created
         setProfile({
           role: 'Staff',
           full_name: sessionUser.email?.split('@')[0] || 'User',
-          allowed_pages: ['dashboard', 'quotations', 'invoices', 'inventory', 'labour', 'attendance']
+          allowed_pages: DEFAULT_FALLBACK_PAGES
         });
       }
     } catch {
       setProfile({
         role: 'Staff',
         full_name: sessionUser.email?.split('@')[0] || 'User',
-        allowed_pages: ['dashboard', 'quotations', 'invoices', 'inventory', 'labour', 'attendance']
+        allowed_pages: DEFAULT_FALLBACK_PAGES
       });
     }
   };

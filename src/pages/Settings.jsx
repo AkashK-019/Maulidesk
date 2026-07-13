@@ -244,11 +244,24 @@ export default function Settings() {
     if (!isAdmin) return; // guard
     if (window.confirm('Are you sure you want to delete this user profile? They will lose access to Maulidesk.')) {
       try {
-        const { error } = await supabase.from('profiles').delete().eq('id', userId);
-        if (error) throw error;
+        const { data, error: fnErr } = await supabase.functions.invoke('delete-staff-user', {
+          body: { userId }
+        });
+
+        if (fnErr) {
+          let message = fnErr.message;
+          try {
+            const body = await fnErr.context.json();
+            if (body?.error) message = body.error;
+          } catch {}
+          throw new Error(message);
+        }
+        if (data?.error) throw new Error(data.error);
+
         fetchSettingsAndUsers();
       } catch (err) {
-        console.error('Delete profile error:', err);
+        console.error('Delete user error:', err);
+        alert(`Delete failed: ${err.message}`);
       }
     }
   };

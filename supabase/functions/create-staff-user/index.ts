@@ -34,46 +34,42 @@ serve(async (req) => {
       .single()
 
     if (profileErr || callerProfile?.role !== 'Admin') {
-      return new Response(JSON.stringify({ error: 'Only Admins can create users' }), {
+      return new Response(JSON.stringify({ error: 'Only Admins can delete users' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const { email, password, full_name, role, allowed_pages } = await req.json()
-    if (!email || !password) throw new Error('Email and password are required')
-    if (password.length < 6) throw new Error('Password must be at least 6 characters')
+    const { userId } = await req.json()
+    if (!userId) throw new Error('userId is required')
 
-    // Admin client — service_role bypasses RLS and creates the user
-    // WITHOUT ever signing in as them in any browser session.
+    // Prevent an Admin from deleting their own account through this flow.
+    if (userId === caller.id) {
+      return new Response(JSON.stringify({ error: 'You cannot delete your own account' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Admin client — service_role bypasses RLS and can delete the Auth user.
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // skip confirmation email; staff logs in immediately
-    })
-    if (createErr) throw createErr
+    // 1. Delete the Auth user (this is the part your old direct-delete code was missing).
+    const { error: authDeleteErr } = await supabaseAdmin.auth.admin.deleteUser(userId)
+    if (authDeleteErr) throw authDeleteErr
 
-    const { error: insertErr } = await supabaseAdmin.from('profiles').insert([{
-      id: newUser.user.id,
-      email,
-      full_name,
-      role: role || 'Staff',
-      allowed_pages: allowed_pages || [],
-    }])
+    // 2. Delete the profile row too, in case it isn't already handled by
+    //    an ON DELETE CASCADE foreign key from profiles.id -> auth.users.id.
+    const { error: profileDeleteErr } = await supabaseAdmin
+      .from('profiles')
+      .delete()
+      .eq('id', userId)
+    if (profileDeleteErr) throw profileDeleteErr
 
-    if (insertErr) {
-      // Roll back the auth user if the profile insert fails, so we never
-      // end up with an orphaned login that has no profile/permissions row.
-      await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
-      throw insertErr
-    }
-
-    return new Response(JSON.stringify({ success: true, user_id: newUser.user.id }), {
+    return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
