@@ -41,7 +41,9 @@ export default function Settings() {
     invoices: true,
     inventory: true,
     labour: true,
-    attendance: true
+    attendance: true,
+    projects: true,
+    finance: true
   });
 
   // User edit state
@@ -151,39 +153,45 @@ export default function Settings() {
 
     setAddUserLoading(true);
     try {
-      // 1. Sign up user
-      const { data, error: signupErr } = await supabase.auth.signUp({
-        email: newUserEmail,
-        password: newUserPassword
-      });
+      // Compile page permissions list
+      const allowedPages = Object.keys(newUserPermissions).filter(page => newUserPermissions[page]);
 
-      if (signupErr) throw signupErr;
-
-      if (data?.user) {
-        // Compile page permissions list
-        const allowedPages = Object.keys(newUserPermissions).filter(page => newUserPermissions[page]);
-
-        // 2. Insert profiles record
-        const { error: profileErr } = await supabase.from('profiles').insert([{
-          id: data.user.id,
+      // Create the user server-side via Edge Function (service_role key).
+      // This never runs supabase.auth.signUp() in this browser, so the
+      // Admin's own logged-in session is never swapped or affected.
+      const { data, error: fnErr } = await supabase.functions.invoke('create-staff-user', {
+        body: {
           email: newUserEmail,
+          password: newUserPassword,
           full_name: newUserFullName,
           role: newUserRole,
           allowed_pages: allowedPages
-        }]);
+        }
+      });
 
-        if (profileErr) throw profileErr;
-
-        alert(`Successfully registered user account: ${newUserEmail}!`);
-        setShowAddUserModal(false);
-        fetchSettingsAndUsers();
-
-        // Reset states
-        setNewUserEmail('');
-        setNewUserPassword('');
-        setNewUserFullName('');
-        setNewUserRole('Staff');
+      if (fnErr) {
+        // supabase.functions.invoke() wraps non-2xx responses in a generic
+        // error object. The actual message we returned from the function
+        // (e.g. "Only Admins can create users", "User already registered")
+        // lives in the response body, so read that out for a useful alert.
+        let message = fnErr.message;
+        try {
+          const body = await fnErr.context.json();
+          if (body?.error) message = body.error;
+        } catch {}
+        throw new Error(message);
       }
+      if (data?.error) throw new Error(data.error);
+
+      alert(`Successfully registered user account: ${newUserEmail}!`);
+      setShowAddUserModal(false);
+      fetchSettingsAndUsers();
+
+      // Reset states
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setNewUserFullName('');
+      setNewUserRole('Staff');
     } catch (err) {
       console.error('Add user error:', err);
       alert(`Add user failed: ${err.message}`);
@@ -202,7 +210,9 @@ export default function Settings() {
       invoices: u.allowed_pages?.includes('invoices') || false,
       inventory: u.allowed_pages?.includes('inventory') || false,
       labour: u.allowed_pages?.includes('labour') || false,
-      attendance: u.allowed_pages?.includes('attendance') || false
+      attendance: u.allowed_pages?.includes('attendance') || false,
+      projects: u.allowed_pages?.includes('projects') || false,
+      finance: u.allowed_pages?.includes('finance') || false
     };
     setNewUserPermissions(permissions);
     setNewUserFullName(u.full_name || '');
@@ -595,7 +605,7 @@ export default function Settings() {
                         setNewUserPassword('');
                         setNewUserFullName('');
                         setNewUserRole('Staff');
-                        setNewUserPermissions({ dashboard: true, quotations: true, invoices: true, inventory: true, labour: true, attendance: true });
+                        setNewUserPermissions({ dashboard: true, quotations: true, invoices: true, inventory: true, labour: true, attendance: true, projects: true, finance: true });
                         setShowAddUserModal(true);
                       }}>
                         <UserPlus size={12} />
