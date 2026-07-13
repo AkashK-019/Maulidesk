@@ -37,12 +37,10 @@ export default function Settings() {
   const [newUserRole, setNewUserRole] = useState('Staff');
   const [newUserPermissions, setNewUserPermissions] = useState({
     dashboard: true,
+    projects: true,
     quotations: true,
-    invoices: true,
     inventory: true,
     labour: true,
-    attendance: true,
-    projects: true,
     finance: true
   });
 
@@ -206,12 +204,10 @@ export default function Settings() {
     // Prepare permission checkboxes
     const permissions = {
       dashboard: u.allowed_pages?.includes('dashboard') || false,
+      projects: u.allowed_pages?.includes('projects') || false,
       quotations: u.allowed_pages?.includes('quotations') || false,
-      invoices: u.allowed_pages?.includes('invoices') || false,
       inventory: u.allowed_pages?.includes('inventory') || false,
       labour: u.allowed_pages?.includes('labour') || false,
-      attendance: u.allowed_pages?.includes('attendance') || false,
-      projects: u.allowed_pages?.includes('projects') || false,
       finance: u.allowed_pages?.includes('finance') || false
     };
     setNewUserPermissions(permissions);
@@ -605,7 +601,7 @@ export default function Settings() {
                         setNewUserPassword('');
                         setNewUserFullName('');
                         setNewUserRole('Staff');
-                        setNewUserPermissions({ dashboard: true, quotations: true, invoices: true, inventory: true, labour: true, attendance: true, projects: true, finance: true });
+                        setNewUserPermissions({ dashboard: true, projects: true, quotations: true, inventory: true, labour: true, finance: true });
                         setShowAddUserModal(true);
                       }}>
                         <UserPlus size={12} />
