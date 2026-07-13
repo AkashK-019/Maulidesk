@@ -105,7 +105,7 @@ const blankItem = () => ({
   id:     Date.now() + Math.random(),
   name:   '',
   desc:   '',
-  qty:    1,
+  qty:    '',
   unit:   'Nos',
   rate:   '',
   gstPct: 18,
@@ -555,21 +555,33 @@ export default function Quotations() {
         .eq('id', q.id);
       if (qErr) throw qErr;
 
-      /* 3️⃣ Auto-generate Tax Invoice with same data as quotation
-         Format: INV-[financial_year]-[quotation_serial]-[invoice_serial_for_this_quotation] */
-      const fy = getCurrentFY();
-      const qtParts = q.quotation_number.split('-');
-      const qtSerial = qtParts[qtParts.length - 1]; // e.g. "002"
-      let count = 0;
+      /* 3️⃣ Auto-generate Tax Invoice with same data as quotation.
+         The invoice number is just the quotation's own number with its
+         "-QT-" segment swapped for "-INV-" — same FY, same sequence,
+         only the name differs:
+           MLD-QT-2627-001  ->  MLD-INV-2627-001
+         This is a pure rename, not a fresh counter, so the invoice
+         always carries the exact same sequence its quotation had. */
+      let invNum = q.quotation_number.replace('-QT-', '-INV-');
+
+      // Safety net: if an invoice with that exact number already exists
+      // (e.g. this quotation was somehow invoiced before, or the
+      // approve action gets triggered twice), append "-R2", "-R3", ...
+      // rather than silently colliding on the unique invoice_number.
       try {
-        const { count: c } = await supabase
-          .from('invoices')
-          .select('id', { count: 'exact', head: true })
-          .eq('quotation_id', q.id);
-        count = c || 0;
+        let candidate = invNum;
+        let suffix = 1;
+        while (suffix < 20) {
+          const { data: clash } = await supabase
+            .from('invoices')
+            .select('id')
+            .eq('invoice_number', candidate)
+            .limit(1);
+          if (!clash || clash.length === 0) { invNum = candidate; break; }
+          suffix += 1;
+          candidate = `${invNum}-R${suffix}`;
+        }
       } catch {}
-      const serial = String(count + 1).padStart(3, '0');
-      const invNum = `INV-${fy}-${qtSerial}-${serial}`;
 
       const today  = new Date().toISOString().split('T')[0];
       const due    = new Date(); due.setDate(due.getDate() + 30);
@@ -1357,7 +1369,7 @@ const needsExtraPage = !!extraPageTailHTML;
                     <label>Client Name *</label>
                     <input type="text" required value={form.client_name}
                       onChange={e=>f('client_name',e.target.value)}
-                      className="input-field" placeholder="e.g. Priya Sharma"/>
+                      className="input-field" placeholder="e.g. Client name"/>
                   </div>
                   <div className="form-group">
                     <label>Client Phone (WhatsApp)</label>
@@ -1457,7 +1469,8 @@ const needsExtraPage = !!extraPageTailHTML;
                                 placeholder="Optional detail…"/></td>
                               <td><input type="number" min="0" step="0.01"
                                 className="qt-item-input narrow" value={it.qty}
-                                onChange={e=>updateItem(it.id,'qty',e.target.value)}/></td>
+                                onChange={e=>updateItem(it.id,'qty',e.target.value)}
+                                placeholder="1"/></td>
                               <td><select className="qt-item-input med" value={it.unit}
                                 onChange={e=>updateItem(it.id,'unit',e.target.value)}>
                                 {UNITS.map(u=><option key={u}>{u}</option>)}

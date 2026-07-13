@@ -1,5 +1,8 @@
-// Builds a CSV file client-side and triggers a download — no backend call needed
-// since we already have the data loaded in the workspace.
+
+export function csvDateText(dateStr) {
+  return `="${dateStr}"`;
+}
+
 export function downloadCSV(filename, headers, rows) {
   const escape = (val) => {
     const s = String(val ?? '');

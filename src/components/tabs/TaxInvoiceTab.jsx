@@ -94,11 +94,16 @@ const getCurrentFY = () => {
   return `${String(fyStart).slice(-2)}${String(fyStart+1).slice(-2)}`;
 };
 
-/* Direct invoices (no quotation behind them) get their own short
-   series so they never collide with quotation-derived invoice
-   numbers, which carry an extra "-serial" segment. */
+/* Direct invoices (no quotation behind them) — numbered MLD-INV-{FY}-{seq},
+   mirroring the quotation number's MLD-QT-{FY}-{seq} shape. Since this
+   always checks the actual max invoice_number in the `invoices` table
+   (rather than a separate stored counter), it stays collision-free with
+   quotation-derived invoices too — those are created in Quotations.jsx by
+   renaming the quotation's own number (MLD-QT-2627-001 -> MLD-INV-2627-001),
+   and land in this same table, so this counter naturally continues past
+   whatever sequence number they used. */
 const genDirectInvoiceNumber = async (sb, fy) => {
-  const prefix = `INV-${fy}-D`;
+  const prefix = `MLD-INV-${fy}-`;
   try {
     const { data } = await sb
       .from('invoices')

@@ -318,7 +318,6 @@ export default function Projects() {
                           <span className="prj-fin-lbl">Invoice Total</span>
                           <span className="prj-fin-val">{formatCurrency(p.invoiceTotal)}</span>
                         </div>
-                        <div className="prj-fin-divider" />
                         <div className="prj-fin-item">
                           <span className="prj-fin-lbl">{p.pending > 0.01 ? 'Pending' : 'Collected'}</span>
                           <span className={`prj-fin-val ${p.pending > 0.01 ? 'due' : 'paid'}`}>
@@ -340,10 +339,9 @@ export default function Projects() {
                             ? <><MapPin size={11} /> <span>{p.client_address}</span></>
                             : null}
                       </div>
-                    </div>
-
-                    <div className="prj-card-open">
-                      Open <ChevronRight size={13} />
+                      <div className="prj-card-open">
+                        Open <ChevronRight size={13} />
+                      </div>
                     </div>
                   </div>
                 );

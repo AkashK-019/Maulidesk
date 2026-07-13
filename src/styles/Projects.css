@@ -220,16 +220,29 @@
    only by hairlines — same treatment as the name block above it and
    the footer below it. */
 .prj-card-finance {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .5rem .75rem;
+  position: relative;
   padding-top: .8rem;
   padding-bottom: .8rem;
   margin-bottom: .1rem;
   border-top: 1px solid #eef5f4;
 }
-.prj-fin-item { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.prj-fin-item:last-child { align-items: flex-end; text-align: right; }
-.prj-fin-divider { width: 1px; align-self: stretch; background: #eef5f4; margin: 0 .8rem; }
+/* Decorative divider drawn as an overlay so it never affects column
+   widths — this keeps this row's columns pixel-aligned with the
+   Event Type / Event Date grid above it. */
+.prj-card-finance::before {
+  content: '';
+  position: absolute;
+  top: .8rem;
+  bottom: .8rem;
+  left: 50%;
+  width: 1px;
+  background: #eef5f4;
+  transform: translateX(-50%);
+}
+.prj-fin-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .prj-fin-lbl {
   font-size: .66rem;
   color: #7c8a92;
@@ -253,13 +266,13 @@
 .prj-card-address { display: flex; align-items: center; gap: 4px; font-size: .73rem; color: #7c8a92; min-width: 0; flex: 1; }
 .prj-card-address span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* "Open" row underneath the footer */
+/* "Open" — now a flex child inside .prj-card-footer, sitting on the
+   same line as the contact number instead of stacked below it. */
 .prj-card-open {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 3px;
-  margin-top: .6rem;
+  flex-shrink: 0;
   font-size: 0.75rem;
   color: #0d9488;
   font-weight: 600;

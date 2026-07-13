@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import { SHIFT_CODES, getShiftMultiplier, getShiftLabel } from '../utils/attendanceCodes';
-import { downloadCSV } from '../utils/exportCsv';
+import { downloadCSV, csvDateText } from '../utils/exportCsv';
 import '../styles/quotations.css';
 import '../styles/labour.css';
 
@@ -484,7 +484,7 @@ export default function Labour() {
     const rows = [...workerAttendance]
       .sort((a, b) => a.attendance_date.localeCompare(b.attendance_date))
       .map(a => [
-        a.attendance_date,
+        csvDateText(a.attendance_date),
         a.status,
         getShiftLabel(a.status),
         ((parseFloat(selectedLabour.daily_wage) || 0) * headcount * getShiftMultiplier(a.status)).toFixed(2),
@@ -533,7 +533,7 @@ export default function Labour() {
     if (!selectedLabour) return;
     const rows = [...workerPayments]
       .sort((a, b) => a.payment_date.localeCompare(b.payment_date))
-      .map(p => [p.payment_date, (parseFloat(p.amount_paid) || 0).toFixed(2), p.payment_mode, p.remarks || '']);
+      .map(p => [csvDateText(p.payment_date), (parseFloat(p.amount_paid) || 0).toFixed(2), p.payment_mode, p.remarks || '']);
     downloadCSV(`${selectedLabour.name.replace(/\s+/g, '_')}_payments.csv`, ['Date', 'Amount', 'Mode', 'Remarks'], rows);
   };
 
