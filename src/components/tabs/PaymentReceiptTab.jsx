@@ -329,6 +329,31 @@ const buildReceiptDocHTML = async (receipt, invoice, company, project) => {
   </div>`;
 };
 
+// waitForFontsReady/settleFontsAndLayout previously only checked the
+// hardcoded PRINT_FONT_SPECS guesses (e.g. '700 38pt Tangerine'). If the
+// real CSS renders a decorative element at a slightly different
+// size/weight than that guess, doc.fonts.check() can report "ready" for
+// the wrong variant while the true one is still mid-swap — html2canvas
+// then rasterizes mid-swap, which shows up as two symptoms: a script font
+// (brand lockup / signature) landing in the wrong spot once its real,
+// much-wider glyphs swap in after layout was already measured, and
+// headings looking artificially bold (the browser faux-bolds a weight
+// whose real font file hasn't finished loading, and that synthetic stroke
+// gets baked into the raster). Reading the *actual* computed style of the
+// elements that carry these fonts guarantees we wait on the exact
+// family/weight/size the page will paint with, not an approximation —
+// this is what desktop's native print sidesteps entirely by never
+// rasterizing at all.
+const collectRenderedFontSpecs = (root) => {
+  const selector = '.qtp-brand-marathi, .qtp-brand-english, .qtp-doc-title, .qtp-sig-company-name, .qtp-billed-name, .qtp-section-head, .qtp-meta-key, .qtp-meta-val';
+  const specs = new Set();
+  root.querySelectorAll(selector).forEach(el => {
+    const cs = getComputedStyle(el);
+    if (cs.fontFamily) specs.add(`${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`);
+  });
+  return Array.from(specs);
+};
+
 const waitForImages = (root) => Promise.all(
   Array.from(root.querySelectorAll('img')).map(img => {
     if (img.complete && img.naturalWidth > 0) {
@@ -346,7 +371,7 @@ const waitForImages = (root) => Promise.all(
 // loading and gives the browser two animation frames to reflow with them,
 // so html2canvas never snapshots a half-laid-out page.
 const settleFontsAndLayout = async (root, doc = document, win = window) => {
-  const specs = PRINT_FONT_SPECS;
+  const specs = Array.from(new Set([...PRINT_FONT_SPECS, ...collectRenderedFontSpecs(root)]));
   try {
     if (doc.fonts) await Promise.all(specs.map(spec => doc.fonts.load(spec).catch(() => {})));
   } catch (_) { /* Font Loading API unsupported — ignore */ }
@@ -356,6 +381,11 @@ const settleFontsAndLayout = async (root, doc = document, win = window) => {
   void root.offsetHeight;
   const raf = win.requestAnimationFrame ? win.requestAnimationFrame.bind(win) : requestAnimationFrame;
   await new Promise(r => raf(() => raf(r)));
+  // Mobile GPU/compositor paint can lag a rAF tick or two behind desktop
+  // after a font swap, especially under html2canvas's own reflow — a
+  // short real-time settle catches what a third rAF alone sometimes
+  // doesn't on slower devices.
+  await new Promise(r => setTimeout(r, 80));
 };
 
 // `doc.fonts.ready` resolving is not a strong enough guarantee before
@@ -512,7 +542,7 @@ const printReceiptDoc = async (receipt, invoice, company, project) => {
   const frameWin = iframe.contentWindow;
   await waitForImages(frameDoc.body);
   await settleFontsAndLayout(frameDoc.body, frameDoc, frameWin);
-  await waitForFontsReady(frameDoc, PRINT_FONT_SPECS);
+  await waitForFontsReady(frameDoc, Array.from(new Set([...PRINT_FONT_SPECS, ...collectRenderedFontSpecs(frameDoc.body)])), 3000);
 
   // Safari in particular needs the iframe's window focused before
   // print() — otherwise it can silently print the (blank) parent page.
@@ -538,8 +568,11 @@ const downloadReceiptPdfDoc = async (receipt, invoice, company, project) => {
   // frame before a freshly-injected subtree has actually repainted with
   // the decorative header fonts, so html2canvas can grab a frame still
   // laid out with fallback-font metrics — shifting/overlapping the header
-  // text. Poll doc.fonts.check() per font before rasterizing, same as print.
-  await waitForFontsReady(document, PRINT_FONT_SPECS);
+  // text, or with a synthetic (faux-bold) weight. Wait on the *actual*
+  // rendered font specs (see collectRenderedFontSpecs), not just the
+  // hardcoded guesses, and give it more budget than the print path since
+  // html2canvas's own reflow adds extra latency before rasterizing.
+  await waitForFontsReady(document, Array.from(new Set([...PRINT_FONT_SPECS, ...collectRenderedFontSpecs(root)])), 3000);
   const pageDivs = Array.from(root.querySelectorAll('.qt-print-doc'));
   pageDivs.forEach(d => { d.style.width = d.style.minWidth = '794px'; d.style.height = d.style.minHeight = d.style.maxHeight = '1122px'; d.style.overflow = 'hidden'; });
   const filename = `Receipt-${receipt.receipt_number || receipt.id}.pdf`;
@@ -565,8 +598,9 @@ const buildReceiptPdfBlob = async (receipt, invoice, company, project) => {
   root.innerHTML = await buildReceiptDocHTML(receipt, invoice, company, project);
   await waitForImages(root);
   await settleFontsAndLayout(root);
-  // Same font-ready race guard as the download path (see comment there).
-  await waitForFontsReady(document, PRINT_FONT_SPECS);
+  // Same font-ready race guard as the download path (see comment there) —
+  // this is also the path mobile Print now uses, so the fix applies there too.
+  await waitForFontsReady(document, Array.from(new Set([...PRINT_FONT_SPECS, ...collectRenderedFontSpecs(root)])), 3000);
   const pageDivs = Array.from(root.querySelectorAll('.qt-print-doc'));
   pageDivs.forEach(d => { d.style.width = d.style.minWidth = '794px'; d.style.height = d.style.minHeight = d.style.maxHeight = '1122px'; d.style.overflow = 'hidden'; });
   const filename = `Receipt-${receipt.receipt_number || receipt.id}.pdf`;
@@ -633,6 +667,22 @@ const shareReceiptViaWhatsApp = async (receipt, invoice, company, project) => {
   } catch (err) { if (err?.name !== 'AbortError') alert('Failed to share: ' + err.message); }
 };
 
+
+// True for touch-primary mobile browsers (iOS Safari, Android Chrome, etc).
+// Unlike every issue printReceiptDoc's own comments already solve for
+// desktop (offscreen 0×0 iframe, leftover @media print rules, font-load
+// races), this one isn't fixable with CSS or timing: mobile browsers'
+// print/share sheet only ever acts on the page currently visible in the
+// tab — it does not reliably print an embedded iframe's contentWindow, no
+// matter how it's sized or positioned. That's a platform limitation, which
+// is why printReceiptDoc works perfectly on desktop but shows a blank page
+// on phones/tablets. So mobile is routed to the same PDF-blob pipeline
+// already used for the WhatsApp share button (buildReceiptPdfBlob) and
+// opened in a new tab — handing off to the OS's own PDF viewer, which has
+// a print button that works reliably on every mobile browser.
+const isMobilePrintUnreliable = () =>
+  /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+  (navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.platform)); // iPadOS reports itself as "Mac"
 
 export default function PaymentReceiptTab({ invoice, payments, company, project, onPaymentAdded }) {
   const [showModal, setShowModal] = useState(false);
@@ -728,7 +778,29 @@ export default function PaymentReceiptTab({ invoice, payments, company, project,
   const handlePrintReceipt = async (rcpt) => {
     setPrintingId(rcpt.id);
     try {
-      await printReceiptDoc(rcpt, invoice, company, project);
+      if (isMobilePrintUnreliable()) {
+        // Open the tab synchronously — same tick as the click — so it's
+        // still counted as a direct response to the user gesture and
+        // doesn't get popup-blocked. Its location is filled in once the
+        // (async) PDF finishes rendering below.
+        const tab = window.open('', '_blank');
+        const { blob, filename } = await buildReceiptPdfBlob(rcpt, invoice, company, project);
+        const url = URL.createObjectURL(blob);
+        if (tab) {
+          // Lands in the OS's native PDF viewer, whose own Print/Share
+          // button works correctly — sidesteps the iframe-print
+          // limitation entirely instead of fighting it.
+          tab.location.href = url;
+        } else {
+          // Gesture didn't register as "direct" for some reason and the
+          // popup got blocked anyway — fall back to a plain download so
+          // the user still gets the receipt.
+          const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } else {
+        await printReceiptDoc(rcpt, invoice, company, project);
+      }
     } catch (err) {
       alert('Failed to print: ' + err.message);
     } finally {
