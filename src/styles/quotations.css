@@ -285,6 +285,7 @@
   padding: .55rem 1.1rem; background: #f1f5f9; color: #475569;
   border: 1px solid #e2e8f0; border-radius: 9px; font-size: .85rem; font-weight: 500;
   cursor: pointer; transition: all .15s;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .btn-secondary:hover { background: #e2e8f0; }
 .btn-approve {
@@ -442,29 +443,45 @@
 }
 
 .qtp-financials { padding: 14px 24px 0; flex-shrink: 0; overflow: hidden; }
-.qtp-items-print-table { width: 100%; border-collapse: collapse; font-size: 11pt; margin-top: 8px; page-break-inside: auto; border: 1px solid #cbd5e1; }
+.qtp-items-print-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 11pt; margin-top: 8px; page-break-inside: auto; border: 1px solid #cbd5e1; }
 .qtp-items-print-table thead { display: table-header-group; }
 .qtp-items-print-table tr    { page-break-inside: avoid; }
 .qtp-items-print-table th {
   background: #0c5a7f; color: #fff; padding: 10px 11px; font-size: 9.5pt;
-  text-transform: uppercase; letter-spacing: .04em; text-align: left;
+  text-transform: uppercase; letter-spacing: .02em; text-align: left;
   box-shadow: inset -1px 0 0 0 rgba(255,255,255,.25);
 }
 .qtp-items-print-table th:last-child { box-shadow: none; }
+.qtp-items-print-table th.col-sr,
+.qtp-items-print-table th.col-item,
+.qtp-items-print-table th.col-desc,
+.qtp-items-print-table th.col-qty,
+.qtp-items-print-table th.col-rate,
+.qtp-items-print-table th.col-amt { text-align: center; font-weight: 700; }
 .qtp-items-print-table td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; box-shadow: inset -1px 0 0 0 #e2e8f0; color: #111111; vertical-align: top; }
 .qtp-items-print-table td:last-child { box-shadow: none; }
 .qtp-items-print-table tr:last-child td { border-bottom: none; }
 .qtp-items-print-table tr:nth-child(even) td { background: #faf9f6; }
 
 .col-sr {
-  width: 30px;
-  text-align: left;
-  padding-left: 14px;
+  width: 32px;
+  text-align: center;
+  padding-left: 0;
+  white-space: nowrap;
 }
 
 .col-item {
-  min-width: 140px;
+  width: 275px;
   text-align: left;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.col-desc {
+  width: 88px;
+  text-align: left;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .col-qty {

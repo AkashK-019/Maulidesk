@@ -1,9 +1,10 @@
 export const SHIFT_CODES = [
-  { code: 'A',  label: 'Absent',        multiplier: 0,   tone: 'absent' },
-  { code: '½P', label: 'Half Day',      multiplier: 0.5, tone: 'half' },
-  { code: 'P',  label: '1 Shift',       multiplier: 1,   tone: 'present' },
-  { code: '2P', label: '2 Shifts',      multiplier: 2,   tone: 'double' },
-  { code: '3P', label: '3 Shifts',      multiplier: 3,   tone: 'triple' },
+  { code: 'A',    label: 'Absent',            multiplier: 0,   tone: 'absent' },
+  { code: '1/2',  label: 'Half Day',          multiplier: 0.5, tone: 'half' },
+  { code: 'P',    label: 'Present',           multiplier: 1,   tone: 'present' },
+  { code: 'P1/2', label: "Up to 9 O'Clock",   multiplier: 1.5, tone: 'onehalf' },
+  { code: 'PP',   label: "Up to 12 O'Clock",  multiplier: 2,   tone: 'double' },
+  { code: 'PPP',  label: "Up to 4 O'Clock",   multiplier: 3,   tone: 'triple' },
 ];
 
 export const getShiftMultiplier = (code) => {

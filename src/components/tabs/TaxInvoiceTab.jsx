@@ -470,7 +470,7 @@ export default function TaxInvoiceTab({ invoice, company, project, onInvoiceCrea
             <thead>
               <tr>
                 <th>#</th>
-                <th>Item / Description</th>
+                <th>Item / Desc.</th>
                 <th>Qty</th>
                 <th>Unit</th>
                 <th>Rate</th>

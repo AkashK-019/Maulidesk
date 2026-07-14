@@ -28,6 +28,14 @@ const SKILL_OPTIONS = [
 
 const todayStr = () => new Date().toISOString().split('T')[0];
 
+// Compact ₹ amount for the small calendar day-boxes, e.g. ₹850, ₹1.2k, ₹45k
+const formatCompactAmount = (amount) => {
+  const n = Number(amount) || 0;
+  if (n >= 100000) return `₹${(n / 100000).toFixed(1).replace(/\.0$/, '')}L`;
+  if (n >= 1000) return `₹${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  return `₹${Math.round(n)}`;
+};
+
 export default function Labour() {
   // ---------- List / global state ----------
   const [labourers, setLabourers] = useState([]);
@@ -71,7 +79,9 @@ export default function Labour() {
   const [crewSize, setCrewSize] = useState(1);
   const [dailyWage, setDailyWage] = useState(0);
   const [aadhaarNumber, setAadhaarNumber] = useState('');
-  const [bankDetails, setBankDetails] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [ifscCode, setIfscCode] = useState('');
+  const [bankName, setBankName] = useState('');
 
   useEffect(() => {
     fetchAll();
@@ -255,6 +265,17 @@ export default function Labour() {
     return map;
   }, [workerAttendance]);
 
+  // Sums every payment logged against a given date, so a day with more than
+  // one payment still shows a single combined total in its calendar box.
+  const monthPaymentsByDay = useMemo(() => {
+    const map = {};
+    workerPayments.forEach(p => {
+      const amt = parseFloat(p.amount_paid) || 0;
+      map[p.payment_date] = (map[p.payment_date] || 0) + amt;
+    });
+    return map;
+  }, [workerPayments]);
+
   // Old months stay fully intact — this just filters the already-loaded full
   // history down to whichever month is currently in view; nothing is ever discarded.
   const monthSummary = useMemo(() => {
@@ -269,7 +290,7 @@ export default function Labour() {
       totalShiftUnits += mult;
       totalWage += dailyRate * headcount * mult;
       if (a.status === 'A') absentDays += 1;
-      else if (a.status === '½P') halfDays += 1;
+      else if (a.status === '1/2') halfDays += 1;
       else presentDays += 1;
     });
     return { markedDays: monthRows.length, presentDays, absentDays, halfDays, totalShiftUnits, totalWage };
@@ -320,7 +341,9 @@ export default function Labour() {
     setCrewSize(1);
     setDailyWage(0);
     setAadhaarNumber('');
-    setBankDetails('');
+    setBankAccountNumber('');
+    setIfscCode('');
+    setBankName('');
     setEditingLabour(null);
     setIsEditing(false);
   };
@@ -340,7 +363,9 @@ export default function Labour() {
     setCrewSize(lab.crew_size || 1);
     setDailyWage(lab.daily_wage || 0);
     setAadhaarNumber(lab.aadhaar_number || '');
-    setBankDetails(lab.bank_details || '');
+    setBankAccountNumber(lab.bank_account_number || '');
+    setIfscCode(lab.ifsc_code || '');
+    setBankName(lab.bank_name || '');
     setIsEditing(true);
     setShowCreateModal(true);
   };
@@ -357,7 +382,9 @@ export default function Labour() {
         crew_size: labourType === 'Group Leader' ? (parseInt(crewSize, 10) || 1) : null,
         daily_wage: parseFloat(dailyWage) || 0,
         aadhaar_number: aadhaarNumber,
-        bank_details: bankDetails,
+        bank_account_number: bankAccountNumber,
+        ifsc_code: ifscCode,
+        bank_name: bankName,
       };
 
       if (isEditing && editingLabour) {
@@ -407,7 +434,7 @@ export default function Labour() {
     }
   };
 
-  // Tap-to-confirm: tapping a status (P / A / ½P / 2P / 3P) saves it immediately —
+  // Tap-to-confirm: tapping a status (A / 1/2 / P / P1/2 / PP / PPP) saves it immediately —
   // no separate "Log Attendance" step. We always write shift = 'Full Day': the
   // shift *code* itself carries the multi-shift meaning, so one row per labour
   // per day is enough, and for a Group Leader that one row represents the whole crew.
@@ -753,7 +780,9 @@ export default function Labour() {
                           />
                         )}
                         <ProfileField label="Aadhaar Number" value={selectedLabour.aadhaar_number || 'N/A'} />
-                        <ProfileField label="Bank Details" value={selectedLabour.bank_details || 'N/A'} full />
+                        <ProfileField label="Bank Account Number" value={selectedLabour.bank_account_number || 'N/A'} />
+                        <ProfileField label="IFSC Code" value={selectedLabour.ifsc_code || 'N/A'} />
+                        <ProfileField label="Bank Name" value={selectedLabour.bank_name || 'N/A'} />
                       </div>
                     )}
 
@@ -832,19 +861,24 @@ export default function Labour() {
                               if (day === null) return <div key={`blank-${idx}`} className="labour-calendar-cell empty" />;
                               const key = dateKey(calendarMonth.year, calendarMonth.month, day);
                               const mark = monthAttendanceByDay[key];
+                              const dayPaid = monthPaymentsByDay[key];
                               const tone = mark ? (SHIFT_CODES.find(s => s.code === mark.status)?.tone || 'absent') : '';
                               const isToday = key === todayStr();
                               const isSelected = key === attDate;
+                              const titleParts = [key];
+                              if (mark) titleParts.push(getShiftLabel(mark.status));
+                              if (dayPaid) titleParts.push(`Paid ${formatCurrency(dayPaid)}`);
                               return (
                                 <button
                                   type="button"
                                   key={key}
-                                  title={mark ? `${key}: ${getShiftLabel(mark.status)}` : key}
+                                  title={titleParts.join(' · ')}
                                   className={`labour-calendar-cell ${tone} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`}
                                   onClick={() => setAttDate(key)}
                                 >
                                   <span className="day-num">{day}</span>
                                   {mark && <span className="day-code">{mark.status}</span>}
+                                  {dayPaid > 0 && <span className="day-pay">{formatCompactAmount(dayPaid)}</span>}
                                 </button>
                               );
                             })}
@@ -1059,9 +1093,19 @@ export default function Labour() {
                       <input type="text" className="input-field" value={aadhaarNumber} onChange={(e) => setAadhaarNumber(e.target.value)} placeholder="e.g. 1234-5678-9012" />
                     </div>
 
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label>Bank Account Number</label>
+                        <input type="text" className="input-field" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} placeholder="e.g. 1234567890" />
+                      </div>
+                      <div className="form-group">
+                        <label>IFSC Code</label>
+                        <input type="text" className="input-field" value={ifscCode} onChange={(e) => setIfscCode(e.target.value.toUpperCase())} placeholder="e.g. SBIN0001234" maxLength={11} style={{ textTransform: 'uppercase' }} />
+                      </div>
+                    </div>
                     <div className="form-group">
-                      <label>Bank Account Details</label>
-                      <textarea className="input-field" rows="2" value={bankDetails} onChange={(e) => setBankDetails(e.target.value)} placeholder="A/C: 1234567890 | IFSC: SBIN0001234 | State Bank of India" />
+                      <label>Bank Name</label>
+                      <input type="text" className="input-field" value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. State Bank of India" />
                     </div>
                   </div>
                   <div className="modal-footer">

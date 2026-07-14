@@ -127,7 +127,7 @@ export default function QuotationTab({ quotation, company, project }) {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Item / Description</th>
+                <th>Item / Desc.</th>
                 <th>Qty</th>
                 <th>Unit</th>
                 <th>Rate</th>

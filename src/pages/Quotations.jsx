@@ -730,9 +730,9 @@ export default function Quotations() {
             const tableHead = () => `
 <thead>
 <tr>
-    <th class="col-sr">SR.NO</th>
+    <th class="col-sr">SR.<br/>NO</th>
     <th class="col-item">Perticular</th>
-    <th class="col-desc">Description</th>
+    <th class="col-desc">Desc.</th>
     <th class="col-qty">Qty</th>
     <th class="col-rate">Rate</th>
     <th class="col-amt">Amount</th>

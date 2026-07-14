@@ -263,6 +263,7 @@
 .labour-today-dot.absent { background: #fef2f2; color: #ef4444; }
 .labour-today-dot.half { background: #fffbeb; color: #b45309; }
 .labour-today-dot.present { background: #ecfdf5; color: #059669; }
+.labour-today-dot.onehalf { background: #f0fdfa; color: #0d9488; }
 .labour-today-dot.double { background: #eff6ff; color: #2563eb; }
 .labour-today-dot.triple { background: #f5f3ff; color: #7c3aed; }
 .labour-today-dot.unmarked { background: #f3f4f6; color: #9ca3af; }
@@ -273,9 +274,9 @@
 }
 
 .labour-status-toggle-group.sm .labour-status-toggle {
-  min-width: 30px;
+  min-width: 34px;
   padding: 0.25rem 0.4rem;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
 }
 
 .labour-tap-hint {
@@ -560,6 +561,18 @@
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
 }
 
+/* Up to 9 o'clock (1.5 shifts) — teal */
+.labour-status-toggle.onehalf {
+  border-color: #14b8a6;
+  color: #0d9488;
+}
+.labour-status-toggle.onehalf.active {
+  background: #14b8a6;
+  border-color: #14b8a6;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.35);
+}
+
 /* 2 shifts — blue */
 .labour-status-toggle.double {
   border-color: #3b82f6;
@@ -601,9 +614,9 @@
   background: #faf9f6;
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 0.85rem;
+  padding: 1.1rem;
   margin-bottom: 1.25rem;
-  max-width: 480px;
+  max-width: 100%;
 }
 
 .labour-calendar-header {
@@ -645,33 +658,33 @@
 
 .labour-calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: clamp(6px, 1vw, 10px);
 }
 
 .labour-calendar-weekday {
   text-align: center;
-  font-size: 0.6rem;
+  font-size: clamp(0.72rem, 1vw, 0.85rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: var(--text-muted);
-  padding-bottom: 3px;
+  padding-bottom: 8px;
 }
 
 .labour-calendar-cell {
-  height: 34px;
+  height: clamp(70px, 9vw, 96px);
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  border-radius: 6px;
+  gap: 4px;
+  border-radius: 10px;
   border: 1px solid var(--border);
   background: #ffffff;
   cursor: pointer;
-  padding: 0;
+  padding: 4px;
   transition: all 0.12s ease;
 }
 
@@ -694,16 +707,25 @@
 }
 
 .labour-calendar-cell .day-num {
-  font-size: 0.66rem;
+  font-size: clamp(0.85rem, 1.3vw, 1.05rem);
   font-weight: 600;
   color: var(--text-muted);
   line-height: 1;
 }
 
 .labour-calendar-cell .day-code {
-  font-size: 0.56rem;
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
   font-weight: 700;
   line-height: 1;
+}
+
+.labour-calendar-cell .day-pay {
+  font-size: clamp(0.85rem, 1.35vw, 1.05rem);
+  font-weight: 700;
+  line-height: 1;
+  color: #1f2937;
+  margin-top: 2px;
+  white-space: nowrap;
 }
 
 .labour-calendar-cell.absent { background: #fef2f2; }
@@ -714,6 +736,9 @@
 
 .labour-calendar-cell.present { background: #ecfdf5; }
 .labour-calendar-cell.present .day-code { color: #059669; }
+
+.labour-calendar-cell.onehalf { background: #f0fdfa; }
+.labour-calendar-cell.onehalf .day-code { color: #0d9488; }
 
 .labour-calendar-cell.double { background: #eff6ff; }
 .labour-calendar-cell.double .day-code { color: #2563eb; }
@@ -912,7 +937,19 @@
   }
 
   .labour-calendar-cell {
-    height: 38px;
+    height: 58px;
+  }
+
+  .labour-calendar-cell .day-num {
+    font-size: 0.78rem;
+  }
+
+  .labour-calendar-cell .day-code {
+    font-size: 0.72rem;
+  }
+
+  .labour-calendar-cell .day-pay {
+    font-size: 0.56rem;
   }
 
   .labour-calendar-summary {
@@ -954,14 +991,18 @@
 
 @media (max-width: 400px) {
   .labour-calendar-cell {
-    height: 32px;
+    height: 50px;
   }
 
   .labour-calendar-cell .day-num {
-    font-size: 0.6rem;
+    font-size: 0.68rem;
   }
 
   .labour-calendar-cell .day-code {
+    font-size: 0.6rem;
+  }
+
+  .labour-calendar-cell .day-pay {
     font-size: 0.5rem;
   }
 }
