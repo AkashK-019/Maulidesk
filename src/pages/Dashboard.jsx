@@ -34,7 +34,6 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // 1. Get Pending/Sent Quotations
       const { data: quotes } = await supabase
         .from('quotations')
         .select('total_amount, status');
@@ -42,20 +41,15 @@ export default function Dashboard() {
       const pendingQuotes = (quotes || []).filter(q => q.status === 'Pending' || q.status === 'Sent');
       const pendingQuotesVal = pendingQuotes.reduce((acc, q) => acc + (parseFloat(q.total_amount) || 0), 0);
 
-      // 2. Get Unpaid/Partially Paid Invoices
       const { data: invoices } = await supabase
         .from('invoices')
         .select('total_amount, amount_paid, status');
 
-      // Use outstanding balance (total - paid) rather than the status string,
-      // so invoices marked 'Overdue' (or any other non-'Paid' status) are
-      // still counted as receivables. This mirrors the effectiveStatus()
-      // logic used in TaxInvoiceTab.jsx.
       const unpaidInvoices = (invoices || []).filter(i => {
         if (i.status === 'Paid') return false;
         const total = parseFloat(i.total_amount) || 0;
         const paid = parseFloat(i.amount_paid) || 0;
-        return (total - paid) > 0.001; // small epsilon to avoid float rounding noise
+        return (total - paid) > 0.001; 
       });
       const unpaidInvoicesVal = unpaidInvoices.reduce((acc, i) => {
         const total = parseFloat(i.total_amount) || 0;
@@ -63,12 +57,10 @@ export default function Dashboard() {
         return acc + (total - paid);
       }, 0);
 
-      // 3. Get Labour count
       const { count: labourCount } = await supabase
         .from('labour_master')
         .select('*', { count: 'exact', head: true });
 
-      // 4. Get Low Stock Inventory Items
       const { data: inventory } = await supabase
         .from('inventory_items')
         .select('quantity_available, low_stock_threshold');
@@ -77,14 +69,12 @@ export default function Dashboard() {
         Number(i.quantity_available) < Number(i.low_stock_threshold)
       ).length;
 
-      // 5. Get Recent 5 quotes
       const { data: recentQ } = await supabase
         .from('quotations')
         .select('id, quotation_number, client_name, total_amount, status')
         .order('created_at', { ascending: false })
         .limit(5);
 
-      // 6. Get Recent 5 invoices
       const { data: recentI } = await supabase
         .from('invoices')
         .select('id, invoice_number, client_name, total_amount, status')

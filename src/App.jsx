@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Login         from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard     from './pages/Dashboard';
 import Quotations    from './pages/Quotations';
 import Inventory     from './pages/Inventory';
@@ -18,6 +19,7 @@ export default function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route path="/"                element={<ProtectedRoute pageKey="dashboard"><Dashboard /></ProtectedRoute>} />
           <Route path="/projects"        element={<ProtectedRoute pageKey="projects"><Projects /></ProtectedRoute>} />

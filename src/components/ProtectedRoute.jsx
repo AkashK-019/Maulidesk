@@ -6,7 +6,6 @@ import Header from './Header';
 export default function ProtectedRoute({ children, pageKey }) {
   const { user, profile, loading } = useAuth();
 
-  // Show spinner while auth is resolving
   if (loading) {
     return (
       <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAF8F5' }}>
@@ -28,12 +27,10 @@ export default function ProtectedRoute({ children, pageKey }) {
     );
   }
 
-  // Redirect to login if not authenticated
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Check page permission (Admins have full access; Staff must have pageKey in allowed_pages list)
   const isAllowed = profile?.role === 'Admin' || !pageKey || (profile?.allowed_pages && profile.allowed_pages.includes(pageKey));
 
   if (!isAllowed) {

@@ -39,7 +39,6 @@ export default function Header({ title }) {
       const todayStr = new Date().toISOString().split('T')[0];
       const activeAlerts = [];
 
-      // Query Overdue Invoices
       const { data: invoices } = await supabase
         .from('invoices')
         .select('invoice_number, due_date')
@@ -71,7 +70,6 @@ export default function Header({ title }) {
         }
       });
 
-      // Save to session cache
       sessionStorage.setItem('alerts_cache', JSON.stringify(activeAlerts));
       sessionStorage.setItem('alerts_last_fetch', Date.now().toString());
 

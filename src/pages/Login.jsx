@@ -34,12 +34,6 @@ export default function Login() {
     }
   };
 
-  /* ── Reset Password ─────────────────────────────────────────
-     1. Check profiles table → role must be 'Admin'
-     2. If Admin  → send magic reset link via Supabase
-     3. If Staff  → show "contact your admin" message
-     4. If unknown email → show "not registered" message
-  ────────────────────────────────────────────────────────────── */
   const handleReset = async (e) => {
     e.preventDefault();
     setErrorMsg(''); setSuccessMsg('');
@@ -47,7 +41,6 @@ export default function Login() {
 
     setSubmitting(true);
 
-    // Step 1 — check role in profiles table
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')

@@ -169,7 +169,7 @@ function buildMonthlyTotals(invoices, receipts, labourPay) {
 }
 
 function pctChange(curr, prev) {
-  if (!prev) return curr > 0 ? null : 0; // null = "new", no baseline to compare
+  if (!prev) return curr > 0 ? null : 0; 
   return ((curr - prev) / Math.abs(prev)) * 100;
 }
 
@@ -262,7 +262,7 @@ export default function Finance() {
     totalLabourCost: 0, netProfit: 0, invoiceCount: 0, paidCount: 0,
     unpaidCount: 0, partialCount: 0,
   });
-  const [prevKpi, setPrevKpi] = useState(null); // same period, one year earlier
+  const [prevKpi, setPrevKpi] = useState(null); 
 
   const [revenueChart,  setRevenueChart]  = useState([]);
   const [labourChart,   setLabourChart]   = useState([]);
@@ -331,10 +331,8 @@ export default function Finance() {
           .map(([name, value]) => ({ name, value }))
       );
 
-      /* Same period, last year — powers the delta badges */
       setPrevKpi(sumTotals(prevData.invoices, prevData.receipts, prevData.labourPay));
 
-      /* Full calendar-year comparison — this year vs last year, month by month */
       const curMonthly  = buildMonthlyTotals(curYearData.invoices, curYearData.receipts, curYearData.labourPay);
       const lastMonthly = buildMonthlyTotals(lastYearData.invoices, lastYearData.receipts, lastYearData.labourPay);
       const monthly = MONTH_NAMES.map((name, i) => ({

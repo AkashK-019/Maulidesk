@@ -28,7 +28,6 @@ const SKILL_OPTIONS = [
 
 const todayStr = () => new Date().toISOString().split('T')[0];
 
-// Compact ₹ amount for the small calendar day-boxes, e.g. ₹850, ₹1.2k, ₹45k
 const formatCompactAmount = (amount) => {
   const n = Number(amount) || 0;
   if (n >= 100000) return `₹${(n / 100000).toFixed(1).replace(/\.0$/, '')}L`;
@@ -37,19 +36,16 @@ const formatCompactAmount = (amount) => {
 };
 
 export default function Labour() {
-  // ---------- List / global state ----------
   const [labourers, setLabourers] = useState([]);
   const [allAttendance, setAllAttendance] = useState([]);
   const [allPayments, setAllPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeListTab, setActiveListTab] = useState('All'); // All | Individual | Group Leader
+  const [activeListTab, setActiveListTab] = useState('All'); 
   const [selectedLabourId, setSelectedLabourId] = useState(null);
 
-  // ---------- Detail workspace state ----------
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('profile'); 
 
-  // ---------- Attendance form ----------
   const [attDate, setAttDate] = useState(todayStr());
   const [attCode, setAttCode] = useState('P');
   const [savingAttendance, setSavingAttendance] = useState(false);
@@ -60,7 +56,6 @@ export default function Labour() {
     return { year: d.getFullYear(), month: d.getMonth() };
   });
 
-  // ---------- Payment form ----------
   const [payAmount, setPayAmount] = useState('');
   const [payDate, setPayDate] = useState(todayStr());
   const [payMode, setPayMode] = useState('Cash');
@@ -87,7 +82,6 @@ export default function Labour() {
     fetchAll();
   }, []);
 
-  // ---------- Data loading ----------
   const fetchAll = async () => {
     setLoading(true);
     try {
@@ -114,10 +108,6 @@ export default function Labour() {
       setLoading(false);
     }
   };
-
-  // If yesterday passed with no attendance logged for a worker who already
-  // existed by then, auto-fill it as Absent so nobody's day silently stays
-  // blank forever. Runs quietly every time data loads — cheap no-op once caught up.
   const autoMarkYesterdayAbsent = async (labs, existingAttendance) => {
     const y = new Date();
     y.setDate(y.getDate() - 1);
@@ -152,10 +142,6 @@ export default function Labour() {
     }
   };
 
-  // ---------- Earnings engine ----------
-  // Map of labour_id -> { earned, paid, balance }
-  // For a Group Leader, one attendance mark represents the WHOLE crew, so the
-  // day's earnings are daily_wage(per worker) * crew_size * shift multiplier.
   const earningsMap = useMemo(() => {
     const map = {};
     labourers.forEach(l => {
@@ -183,10 +169,6 @@ export default function Labour() {
     return map;
   }, [labourers, allAttendance, allPayments]);
 
-  // ---------- Roll-call state (used by the summary bar + list quick-mark buttons) ----------
-  // Every worker defaults to Absent for rollDate until an explicit mark exists —
-  // this is a *display/derived* default only; nothing is written to the database
-  // until someone actually taps a status, so historical days are never touched.
   const rollMarkMap = useMemo(() => {
     const map = {};
     allAttendance.forEach(a => {
@@ -209,11 +191,6 @@ export default function Labour() {
   );
   const workerStats = selectedLabourId ? (earningsMap[selectedLabourId] || { earned: 0, paid: 0, balance: 0 }) : null;
 
-  // ---------- Payments tab: current month only ----------
-  // Dates are plain 'YYYY-MM-DD' strings, so string comparison against
-  // currentMonthStartKey is safe and avoids any timezone conversion issues.
-  // currentMonthPaid: payments logged this month.
-  // currentMonthOutstanding: this month's earned minus this month's paid.
   const workerMonthlyStats = useMemo(() => {
     if (!selectedLabourId || !selectedLabour) return null;
     const now = new Date();
@@ -242,13 +219,11 @@ export default function Labour() {
     };
   }, [selectedLabourId, selectedLabour, isCrew, workerAttendance, workerPayments]);
 
-  // The mark for today/selected attDate, if one already exists — lets the tap buttons show current state
   const attDateExistingMark = useMemo(
     () => workerAttendance.find(a => a.attendance_date === attDate) || null,
     [workerAttendance, attDate]
   );
 
-  // ---------- Monthly calendar (Attendance tab) ----------
   const calendarDays = useMemo(() => {
     const { year, month } = calendarMonth;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -265,8 +240,6 @@ export default function Labour() {
     return map;
   }, [workerAttendance]);
 
-  // Sums every payment logged against a given date, so a day with more than
-  // one payment still shows a single combined total in its calendar box.
   const monthPaymentsByDay = useMemo(() => {
     const map = {};
     workerPayments.forEach(p => {
@@ -276,8 +249,6 @@ export default function Labour() {
     return map;
   }, [workerPayments]);
 
-  // Old months stay fully intact — this just filters the already-loaded full
-  // history down to whichever month is currently in view; nothing is ever discarded.
   const monthSummary = useMemo(() => {
     const { year, month } = calendarMonth;
     const prefix = `${year}-${pad2(month + 1)}-`;
@@ -331,7 +302,6 @@ export default function Labour() {
     setPayRemarks('');
   };
 
-  // ---------- Labour Profile CRUD ----------
   const resetLabourForm = () => {
     setName('');
     setMobile('');
@@ -434,11 +404,6 @@ export default function Labour() {
     }
   };
 
-  // Tap-to-confirm: tapping a status (A / 1/2 / P / P1/2 / PP / PPP) saves it immediately —
-  // no separate "Log Attendance" step. We always write shift = 'Full Day': the
-  // shift *code* itself carries the multi-shift meaning, so one row per labour
-  // per day is enough, and for a Group Leader that one row represents the whole crew.
-  // Used both by the list's roll-call buttons and the detail workspace's Attendance tab.
   const quickMarkAttendance = async (labourId, code, date) => {
     if (!labourId) return;
     const key = `${labourId}-${date}`;
@@ -468,9 +433,6 @@ export default function Labour() {
     }
   };
 
-  // "Clear" — wipes a mark for a given labour + date, reverting that day back to
-  // the default Absent state. Used by both the list's roll-call row and the
-  // detail workspace's Attendance tab.
   const quickClearAttendance = async (labourId, date) => {
     const mark = allAttendance.find(a => a.labour_id === labourId && a.attendance_date === date);
     if (!mark) return;
@@ -503,8 +465,6 @@ export default function Labour() {
     }
   };
 
-  // Exports the SELECTED worker's full attendance history (all months, not just the
-  // one currently shown in the calendar) — old data is never trimmed out of this.
   const exportAttendanceCSV = () => {
     if (!selectedLabour) return;
     const headcount = isCrew ? (parseInt(selectedLabour.crew_size, 10) || 1) : 1;

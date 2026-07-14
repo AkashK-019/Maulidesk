@@ -14,10 +14,10 @@ export default function Attendance() {
   const [labourers, setLabourers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilter, setActiveFilter] = useState('All'); // All | Individual | Group Leader
+  const [activeFilter, setActiveFilter] = useState('All'); 
   const [selectedDate, setSelectedDate] = useState(todayStr());
-  const [dayAttendance, setDayAttendance] = useState([]); // rows for selectedDate only
-  const [savingId, setSavingId] = useState(null); // labour_id currently being saved (for a small inline spinner)
+  const [dayAttendance, setDayAttendance] = useState([]); 
+  const [savingId, setSavingId] = useState(null);
 
   useEffect(() => {
     fetchLabourers();
@@ -25,7 +25,6 @@ export default function Attendance() {
 
   useEffect(() => {
     fetchDayAttendance(selectedDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   const fetchLabourers = async () => {
@@ -51,7 +50,6 @@ export default function Attendance() {
     }
   };
 
-  // labour_id -> { id, status } for the selected date, if marked
   const markMap = useMemo(() => {
     const map = {};
     dayAttendance.forEach(a => { map[a.labour_id] = a; });
@@ -75,7 +73,6 @@ export default function Attendance() {
         .select();
       if (error) throw error;
 
-      // Optimistic local update so the tap feels instant
       const saved = data && data[0] ? data[0] : row;
       setDayAttendance(prev => {
         const exists = prev.find(a => a.labour_id === labourId);
@@ -90,7 +87,6 @@ export default function Attendance() {
     }
   };
 
-  // Clear — removes a wrongly-tapped mark for this labourer on the selected date
   const clearAttendance = async (labourId) => {
     const existing = markMap[labourId];
     if (!existing || !existing.id) return;
@@ -116,7 +112,6 @@ export default function Attendance() {
     return matchesSearch && matchesFilter;
   });
 
-  // Day summary — a Group Leader's mark represents their whole crew
   const summary = useMemo(() => {
     let marked = 0, present = 0, absent = 0, payout = 0, headcountMarked = 0;
     labourers.forEach(l => {

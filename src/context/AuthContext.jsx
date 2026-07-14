@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 
@@ -11,7 +10,6 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Sync profile data from profiles table
   const fetchProfile = async (sessionUser) => {
     try {
       const { data, error } = await supabase
@@ -23,7 +21,6 @@ export function AuthProvider({ children }) {
       if (data) {
         setProfile(data);
       } else {
-        // Fallback if profiles row is not found or yet created
         setProfile({
           role: 'Staff',
           full_name: sessionUser.email?.split('@')[0] || 'User',
@@ -40,7 +37,6 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user);
@@ -50,7 +46,6 @@ export function AuthProvider({ children }) {
       }
     });
 
-    // Listen for Supabase auth session changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         setUser(session.user);
@@ -65,7 +60,6 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Login handler
   const signIn = async (email, password) => {
     setLoading(true);
     try {
@@ -78,7 +72,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Sign out handler
   const signOut = async () => {
     setLoading(true);
     await supabase.auth.signOut();

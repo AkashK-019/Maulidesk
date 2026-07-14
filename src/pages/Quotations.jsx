@@ -395,9 +395,6 @@ export default function Quotations() {
       validity_days:    q.validity_days    ?? '30',
       quotation_date:   q.quotation_date   || new Date().toISOString().split('T')[0],
       notes:            q.notes            || '',
-      // Use ?? instead of || so that an intentionally-cleared (empty string)
-      // payment_terms / terms_conditions value stays empty instead of
-      // silently falling back to the default boilerplate text.
       payment_terms:    q.payment_terms    ?? COMPANY_DEFAULTS.paymentTerms.join('\n'),
       terms_conditions: q.terms_conditions ?? COMPANY_DEFAULTS.termsAndConditions.join('\n'),
     });
@@ -408,7 +405,7 @@ export default function Quotations() {
         ? saved.map(i => ({
             ...i,
             id:     Date.now() + Math.random(),
-            gstPct: i.gstPct ?? 0,   // preserve explicit 0%
+            gstPct: i.gstPct ?? 0,   
           }))
         : [blankItem()]);
     } catch { setItems([blankItem()]); }
@@ -427,12 +424,10 @@ export default function Quotations() {
     setSaving(true);
     const { subtotal, totalGst, grandTotal, cgst, sgst, igst, isInterState: inter } = totals;
 
-    // Compute effective GST % (weighted average, for display only)
     const effectiveGstPct = subtotal > 0
       ? parseFloat(((totalGst / subtotal) * 100).toFixed(2))
       : 0;
 
-    // Enrich line_items with per-item computed amounts for accurate PDF regeneration
     const enrichedItems = items.map(it => {
       const { amount, gstTotal, cgst: iC, sgst: iS, igst: iI, total } =
         calcItemAmount(it, form.client_state, company.state);
@@ -470,9 +465,6 @@ export default function Quotations() {
       validity_days:     Number(form.validity_days) || 30,
       quotation_date:    form.quotation_date  || null,
       notes:             form.notes           || null,
-      // Save exactly what's in the form — including an intentionally
-      // cleared (empty string) value — instead of coercing '' to null,
-      // which used to make the PDF re-fill it with default boilerplate.
       payment_terms:     form.payment_terms,
       terms_conditions:  form.terms_conditions,
       status:            'Pending',
@@ -490,9 +482,6 @@ export default function Quotations() {
         const { error } = await supabase.from('quotations').update(payload).eq('id', editingId);
         if (error) throw error;
       } else {
-        // Try the number already in the form; on a unique-constraint collision
-        // (e.g. another tab/double-click beat us to it), regenerate the next
-        // free number from the DB and retry once automatically.
         let qtNum = form.quotation_number;
         let payload = buildPayload(qtNum);
         let { error } = await supabase.from('quotations').insert([payload]);
@@ -525,14 +514,11 @@ export default function Quotations() {
       fetchQuotations();
     } catch (err) { alert('Failed to delete: ' + err.message); }
   };
-
-  /* ─── Approve → Create Project + Auto-generate Tax Invoice ─── */
   const handleApprove = async () => {
     if (!approveTarget) return;
     setApproving(true);
     const q = approveTarget;
     try {
-      /* 1️⃣ Create project */
       const { data: proj, error: projErr } = await supabase
         .from('projects')
         .insert([{
@@ -548,26 +534,13 @@ export default function Quotations() {
         .select().single();
       if (projErr) throw projErr;
 
-      /* 2️⃣ Mark quotation Approved + link project */
       const { error: qErr } = await supabase
         .from('quotations')
         .update({ status: 'Approved', project_id: proj.id })
         .eq('id', q.id);
       if (qErr) throw qErr;
-
-      /* 3️⃣ Auto-generate Tax Invoice with same data as quotation.
-         The invoice number is just the quotation's own number with its
-         "-QT-" segment swapped for "-INV-" — same FY, same sequence,
-         only the name differs:
-           MLD-QT-2627-001  ->  MLD-INV-2627-001
-         This is a pure rename, not a fresh counter, so the invoice
-         always carries the exact same sequence its quotation had. */
       let invNum = q.quotation_number.replace('-QT-', '-INV-');
 
-      // Safety net: if an invoice with that exact number already exists
-      // (e.g. this quotation was somehow invoiced before, or the
-      // approve action gets triggered twice), append "-R2", "-R3", ...
-      // rather than silently colliding on the unique invoice_number.
       try {
         let candidate = invNum;
         let suffix = 1;
@@ -608,11 +581,6 @@ export default function Quotations() {
         client_address: q.client_address || null,
         client_state:   q.client_state   || 'Maharashtra',
         items:          storedItems,
-        // NOTE: line_items intentionally left null here — `items` above is
-        // the single source of truth for invoice line data now. Keeping
-        // `line_items` around (rather than dropping the column) means the
-        // fallback read logic in TaxInvoiceTab.jsx still works for any
-        // older invoice rows that only have line_items populated.
         line_items:     null,
         amount:         q.amount,
         gst_percent:    q.gst_percent,
@@ -652,7 +620,6 @@ export default function Quotations() {
     return null;
   };
 
-  /* ─── Build printable A4 HTML (explicit page divs) ─── */
   const buildQuotationDocHTML = async (q) => {
     const lineItems   = getPrintItems(q);
     const clientState = q.client_state || 'Maharashtra';
@@ -681,7 +648,6 @@ export default function Quotations() {
       return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
     })();
 
-    /* ── Item rows HTML — simplified to NO / ITEM / PRICE / QTY / TOTAL only ── */
     const allItemRows = lineItems
       ? lineItems.map((it, i) => {
           const { amount } = calcItemAmount(it, clientState, company.state);
@@ -758,9 +724,6 @@ export default function Quotations() {
       : `<tr><td class="qtp-totals-label">CGST</td><td class="qtp-totals-value">₹${cgst.toLocaleString('en-IN',{minimumFractionDigits:2})}</td></tr>
          <tr><td class="qtp-totals-label">SGST</td><td class="qtp-totals-value">₹${sgst.toLocaleString('en-IN',{minimumFractionDigits:2})}</td></tr>`;
 
-    // Payment Terms / Terms & Conditions: use the saved value as-is (?? not
-    // ||) so an intentionally-cleared field renders as nothing instead of
-    // falling back to the default boilerplate text.
     const paymentTermsRaw  = q.payment_terms ?? COMPANY_DEFAULTS.paymentTerms.join('\n');
     const termsRaw         = q.terms_conditions ?? COMPANY_DEFAULTS.termsAndConditions.join('\n');
     const paymentTermsList = paymentTermsRaw.split('\n').map(t=>t.trim()).filter(Boolean);
@@ -951,7 +914,7 @@ export default function Quotations() {
             break;
           }
         }
-        if (rows.length === 0) rows = [remaining[0]]; // safety net: always make progress even if a single row can't fit cleanly
+        if (rows.length === 0) rows = [remaining[0]]; 
         itemBuckets.push(rows);
         remaining = remaining.slice(rows.length);
         pageNum++;
@@ -1026,20 +989,12 @@ const needsExtraPage = !!extraPageTailHTML;
     })
   );
 
-  // The header's "Decorators" script text is absolutely positioned and uses a
-  // custom cursive webfont (Tangerine). html2canvas rasterizes the page before
-  // the browser has necessarily fetched/laid out that font for the very first
-  // time it's used, which is what made it jump downward only in the downloaded
-  // PDF (never in native print, which always waits for real layout). We force
-  // the exact font faces to load, then give the browser two animation frames
-  // to actually flush layout with those fonts before html2canvas snapshots it.
   const settleFontsAndLayout = async (root) => {
     const specs = ['700 38pt Tangerine', '700 1em Tillana', '700 1em "Yatra One"', '800 26pt Inter'];
     try {
       await Promise.all(specs.map(spec => document.fonts.load(spec).catch(() => {})));
     } catch (_) { /* Font Loading API unsupported — ignore */ }
     await document.fonts.ready;
-    // Force a synchronous reflow so layout reflects the now-loaded fonts/images.
     void root.offsetHeight;
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   };
@@ -1105,18 +1060,6 @@ const needsExtraPage = !!extraPageTailHTML;
     } finally { root.innerHTML=''; root.style.width=root.style.minWidth=''; }
   };
 
-  /* ─── WhatsApp share ───
-     Best case (mobile Chrome/Safari with file-share support): native share
-     sheet opens with the real PDF attached — user picks WhatsApp, then any
-     contact, and the file goes straight in.
-     Fallback (desktop, or any browser without file-share support): WhatsApp
-     Desktop/Web has no way to receive a file pushed from a website — that
-     capability only exists through a phone's native share sheet. The best a
-     website can do on desktop is (a) open WhatsApp directly to a contact
-     PICKER — not locked to the client's saved number — by omitting the phone
-     number from the wa.me link, which triggers WhatsApp's own "choose a
-     chat" screen, and (b) download the PDF at the same time so it's one
-     drag-and-drop away from being attached once a chat is open. */
   const handleWhatsApp = async (q) => {
     setShareOpen(null);
     const gt    = Number(q.total_amount||0);
@@ -1127,20 +1070,14 @@ const needsExtraPage = !!extraPageTailHTML;
       `Kindly review and confirm at your earliest convenience.\n\n` +
       `Warm regards,\n${company.name}${company.phone ? '\n'+company.phone : ''}`
     );
-    // No phone number here on purpose — this makes WhatsApp open its own
-    // contact/chat picker instead of a single fixed chat.
     const waUrl = `https://wa.me/?text=${waText}`;
     try {
       const { blob, filename } = await buildPdfBlob(q);
       const file = new File([blob], filename, { type:'application/pdf' });
       if (navigator.canShare && navigator.canShare({ files:[file] })) {
-        // Native share sheet (mobile Chrome/Safari): user picks WhatsApp,
-        // then any contact, and the PDF is attached directly.
+       
         await navigator.share({ files:[file], title:`Quotation ${q.quotation_number}` });
       } else {
-        // Desktop / unsupported browser: silently download the PDF, then
-        // open WhatsApp straight to its own contact picker — no blocking
-        // dialog, no fixed number.
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
         URL.revokeObjectURL(url);

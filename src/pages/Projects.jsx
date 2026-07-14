@@ -68,9 +68,6 @@ export default function Projects() {
       ]);
       if (error) throw error;
 
-      // Sum invoice totals and payments per project, and track which
-      // projects actually have an invoice at all (so we can tell "no
-      // invoice yet" apart from "invoice fully paid").
       const invoiceTotals = {};
       const invoicedIds = new Set();
       (invs || []).forEach(inv => {

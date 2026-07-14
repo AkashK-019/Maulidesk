@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --primary: #1e2530;          /* Charcoal */
+  --primary: #1e2530;         
   --primary-light: #3f4b54;    /* Lighter Charcoal / slate */
   --primary-subtle: #eefaf8;   /* Pale Teal background */
   --accent: #0d9488;           /* Teal */

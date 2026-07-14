@@ -129,11 +129,6 @@ const fmt = (n) =>
 const fmtINR = (n) =>
   `₹${Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 
-/* isInterState / calcItemAmount / calcTotals / formatDateSafe / numToWords /
-   genInvoiceNumber are all imported from ../utils/documentPrint so the figures
-   and PDF are guaranteed identical to the Quotations page. */
-
-/* ─── Effective display status ("Overdue" removed along with due_date) ─── */
 const displayStatus = (inv) => {
   if (inv.status === 'Paid') return 'Paid';
   const balance = Number(inv.total_amount||0) - Number(inv.amount_paid||0);
@@ -141,9 +136,6 @@ const displayStatus = (inv) => {
   return inv.status || 'Unpaid';
 };
 
-/* ═══════════════════════════════════════════════════════════
-   COMPONENT
-═══════════════════════════════════════════════════════════ */
 export default function Invoices() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -152,7 +144,7 @@ export default function Invoices() {
   const [invoices, setInvoices]         = useState([]);
   const [projects, setProjects]         = useState([]);
   const [quotationTotals, setQuotationTotals] = useState([]); // {id, quotation_number, total_amount} for every quotation any invoice links to
-  const [projectQuotes, setProjectQuotes] = useState([]); // approved quotes for the selected project
+  const [projectQuotes, setProjectQuotes] = useState([]); 
   const [searchTerm, setSearchTerm]     = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [showModal, setShowModal]       = useState(false);
@@ -177,7 +169,6 @@ export default function Invoices() {
 
   useEffect(() => { fetchInvoices(); fetchCompany(); fetchProjects(); }, []);
 
-  /* ─── Consume navigation state from Projects page: { projectId, quotationId } ─── */
   useEffect(() => {
     if (consumedNav.current) return;
     if (!location.state || !projects.length) return;
@@ -187,7 +178,6 @@ export default function Invoices() {
       openAddModal(projectId, quotationId || null);
       navigate(location.pathname, { replace: true, state: {} });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projects, location.state]);
 
   const fetchCompany = async () => {
@@ -235,10 +225,6 @@ export default function Invoices() {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setInvoices(data || []);
-      // Pull just the totals for whichever quotations these invoices are linked
-      // to, so the card can show "Balance vs Quotation" (quotation grand total
-      // minus every invoice raised against it so far) instead of a single
-      // invoice's own paid/unpaid amount.
       const quoteIds = [...new Set((data || []).map(i => i.quotation_id).filter(Boolean))];
       if (quoteIds.length) {
         const { data: quotes } = await supabase
@@ -257,8 +243,6 @@ export default function Invoices() {
   const projectMap = projects.reduce((m,p) => { m[p.id]=p; return m; }, {});
   const quotationMap = quotationTotals.reduce((m,q) => { m[q.id]=q; return m; }, {});
 
-  /* Sum of every invoice's total_amount raised against each quotation, so we
-     can show a running "Balance vs Quotation" figure per invoice card. */
   const invoicedTotalsByQuote = invoices.reduce((m, i) => {
     if (!i.quotation_id) return m;
     m[i.quotation_id] = (m[i.quotation_id] || 0) + Number(i.total_amount || 0);
@@ -267,7 +251,7 @@ export default function Invoices() {
 
   const balanceVsQuotation = (inv) => {
     const q = quotationMap[inv.quotation_id];
-    if (!q) return null; // this invoice isn't linked to a quotation
+    if (!q) return null; 
     const invoicedSoFar = invoicedTotalsByQuote[inv.quotation_id] || 0;
     return {
       quotationTotal: Number(q.total_amount || 0),
@@ -286,7 +270,6 @@ export default function Invoices() {
 
   const totals = calcTotals(items, form.client_state, company.state);
 
-  /* ─── Load approved quotations belonging to a project (for prefill) ─── */
   const loadProjectQuotes = async (projectId) => {
     if (!projectId) { setProjectQuotes([]); return; }
     try {
@@ -466,10 +449,6 @@ export default function Invoices() {
     } catch (err) { setPaying(false); alert('Failed to record payment: ' + err.message); }
   };
 
-  /* ─── Print / PDF / WhatsApp — routed through the same shared engine used
-        by Quotations.jsx and Projects.jsx, so the invoice PDF is byte-for-byte
-        the same branded, paginated document (same CSS classes, same layout,
-        same pagination logic) as a quotation. ─── */
   const handlePrint = async (inv) => {
     setShareOpen(null);
     try {

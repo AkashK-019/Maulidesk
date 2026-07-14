@@ -15,8 +15,6 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('Missing authorization header')
 
-    // Client scoped to the CALLER's own JWT — used only to verify who is calling.
-    // This never touches the service_role key and cannot bypass RLS.
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -50,12 +48,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Invite flow: no password is set by the Admin. Supabase creates the
-    // auth user and emails them a secure link to set their own password.
-    // This uses Supabase's built-in invite email — no extra email service needed.
+    const siteUrl = Deno.env.get('SITE_URL')
+    const inviteOptions = { data: { full_name } }
+    if (siteUrl) {
+      inviteOptions.redirectTo = `${siteUrl}/reset-password`
+    }
+
     const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       email,
-      { data: { full_name } }
+      inviteOptions
     )
     if (createErr) throw createErr
 
@@ -68,8 +69,6 @@ serve(async (req) => {
     }])
 
     if (insertErr) {
-      // Roll back the auth user if the profile insert fails, so we never
-      // end up with an orphaned login that has no profile/permissions row.
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
       throw insertErr
     }

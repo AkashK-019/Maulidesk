@@ -10,7 +10,6 @@ export default function Settings() {
   const { profile, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(true);
 
-  // 1. Company Settings state
   const [companyName, setCompanyName] = useState('Mauli Decorators');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
@@ -22,12 +21,10 @@ export default function Settings() {
   const [ifscCode, setIfscCode] = useState('');
   const [branchName, setBranchName] = useState('');
 
-  // 2. Change Password state
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
 
-  // 3. User Management states
   const [users, setUsers] = useState([]);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [addUserLoading, setAddUserLoading] = useState(false);
@@ -51,15 +48,11 @@ export default function Settings() {
 
   useEffect(() => {
     fetchSettingsAndUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSettingsAndUsers = async () => {
     setLoading(true);
     try {
-      // Fetch company settings — only Admins need this, but harmless to fetch
-      // (the UI itself is now gated below; tighten with RLS on the `settings`
-      // table so non-admins can't write to it even via direct API calls)
       const { data: settingsData } = await supabase.from('settings').select('*').eq('id', 1).single();
       if (settingsData) {
         setCompanyName(settingsData.company_name);
@@ -86,10 +79,9 @@ export default function Settings() {
     }
   };
 
-  // Save company config settings
   const handleSaveCompanySettings = async (e) => {
     e.preventDefault();
-    if (!isAdmin) return; // guard, in case the form somehow renders
+    if (!isAdmin) return; 
     try {
       const { error } = await supabase.from('settings').upsert({
         id: 1,
@@ -146,14 +138,8 @@ export default function Settings() {
 
     setAddUserLoading(true);
     try {
-      // Compile page permissions list
       const allowedPages = Object.keys(newUserPermissions).filter(page => newUserPermissions[page]);
 
-      // Create the user server-side via Edge Function (service_role key).
-      // This never runs supabase.auth.signUp() in this browser, so the
-      // Admin's own logged-in session is never swapped or affected.
-      // No password is set here — the new user gets an invite email and
-      // sets their own password via a secure link.
       const { data, error: fnErr } = await supabase.functions.invoke('create-staff-user', {
         body: {
           email: newUserEmail,
@@ -164,10 +150,6 @@ export default function Settings() {
       });
 
       if (fnErr) {
-        // supabase.functions.invoke() wraps non-2xx responses in a generic
-        // error object. The actual message we returned from the function
-        // (e.g. "Only Admins can create users", "User already registered")
-        // lives in the response body, so read that out for a useful alert.
         let message = fnErr.message;
         try {
           const body = await fnErr.context.json();
@@ -229,14 +211,14 @@ export default function Settings() {
       alert('User permission parameters updated!');
       setShowEditUserModal(false);
       fetchSettingsAndUsers();
-      refreshProfile(); // Refresh current user's profile if editing self
+      refreshProfile(); 
     } catch (err) {
       console.error('Edit user error:', err);
     }
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!isAdmin) return; // guard
+    if (!isAdmin) return; 
     if (window.confirm('Are you sure you want to delete this user profile? They will lose access to Maulidesk.')) {
       try {
         const { data, error: fnErr } = await supabase.functions.invoke('delete-staff-user', {
