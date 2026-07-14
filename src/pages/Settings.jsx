@@ -32,7 +32,6 @@ export default function Settings() {
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [addUserLoading, setAddUserLoading] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserFullName, setNewUserFullName] = useState('');
   const [newUserRole, setNewUserRole] = useState('Staff');
   const [newUserPermissions, setNewUserPermissions] = useState({
@@ -144,10 +143,6 @@ export default function Settings() {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     if (!isAdmin) return; // guard
-    if (newUserPassword.length < 6) {
-      alert('Temporary password must be at least 6 characters.');
-      return;
-    }
 
     setAddUserLoading(true);
     try {
@@ -157,10 +152,11 @@ export default function Settings() {
       // Create the user server-side via Edge Function (service_role key).
       // This never runs supabase.auth.signUp() in this browser, so the
       // Admin's own logged-in session is never swapped or affected.
+      // No password is set here — the new user gets an invite email and
+      // sets their own password via a secure link.
       const { data, error: fnErr } = await supabase.functions.invoke('create-staff-user', {
         body: {
           email: newUserEmail,
-          password: newUserPassword,
           full_name: newUserFullName,
           role: newUserRole,
           allowed_pages: allowedPages
@@ -181,13 +177,12 @@ export default function Settings() {
       }
       if (data?.error) throw new Error(data.error);
 
-      alert(`Successfully registered user account: ${newUserEmail}!`);
+      alert(`Invitation email sent to ${newUserEmail}!`);
       setShowAddUserModal(false);
       fetchSettingsAndUsers();
 
       // Reset states
       setNewUserEmail('');
-      setNewUserPassword('');
       setNewUserFullName('');
       setNewUserRole('Staff');
     } catch (err) {
@@ -611,7 +606,6 @@ export default function Settings() {
                       </h3>
                       <button className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem' }} onClick={() => {
                         setNewUserEmail('');
-                        setNewUserPassword('');
                         setNewUserFullName('');
                         setNewUserRole('Staff');
                         setNewUserPermissions({ dashboard: true, projects: true, quotations: true, inventory: true, labour: true, finance: true });
@@ -696,18 +690,6 @@ export default function Settings() {
                       />
                     </div>
 
-                    <div className="form-group">
-                      <label>Temporary Password *</label>
-                      <input
-                        type="password"
-                        className="input-field"
-                        required
-                        value={newUserPassword}
-                        onChange={(e) => setNewUserPassword(e.target.value)}
-                        placeholder="••••••••"
-                      />
-                    </div>
-
                     <div className="form-grid">
                       <div className="form-group">
                         <label>User Full Name *</label>
@@ -757,7 +739,7 @@ export default function Settings() {
                   <div className="modal-footer">
                     <button type="button" className="btn-secondary" onClick={() => setShowAddUserModal(false)}>Cancel</button>
                     <button type="submit" className="btn-primary" disabled={addUserLoading}>
-                      {addUserLoading ? 'Creating User...' : 'Add User Profile'}
+                      {addUserLoading ? 'Sending Invite...' : 'Send Invite'}
                     </button>
                   </div>
                 </form>
