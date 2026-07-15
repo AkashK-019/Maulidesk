@@ -5,7 +5,7 @@ import { isSupabaseConfigured, supabase } from '../supabase';
 import '../styles/login.css';
 
 // ── ImageKit background image URL ──────────────────────────────
-const BG_IMAGE_URL = '../public/login_bg.png';
+const BG_IMAGE_URL = '/login_bg.png';
 // ───────────────────────────────────────────────────────────────
 
 export default function Login() {
