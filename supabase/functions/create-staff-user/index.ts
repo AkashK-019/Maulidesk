@@ -15,6 +15,8 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('Missing authorization header')
 
+    // Client scoped to the CALLER's own JWT — used only to verify who is calling.
+    // This never touches the service_role key and cannot bypass RLS.
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -38,8 +40,11 @@ serve(async (req) => {
       })
     }
 
-    const { email, full_name, role, allowed_pages } = await req.json()
+    const { email, full_name, role, allowed_pages, password } = await req.json()
     if (!email) throw new Error('Email is required')
+    if (!password || password.length < 6) {
+      throw new Error('Password is required and must be at least 6 characters')
+    }
 
     // Admin client — service_role bypasses RLS and creates the user
     // WITHOUT ever signing in as them in any browser session.
@@ -48,16 +53,17 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const siteUrl = Deno.env.get('SITE_URL')
-    const inviteOptions = { data: { full_name } }
-    if (siteUrl) {
-      inviteOptions.redirectTo = `${siteUrl}/reset-password`
-    }
-
-    const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+    // Direct-create flow: the Admin sets the password themselves, right here.
+    // email_confirm: false means Supabase still emails the user a confirmation
+    // link (via the "Confirm signup" template) which they must click to
+    // activate the account, but the password is already set — no separate
+    // "set your password" step is needed on their end.
+    const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
       email,
-      inviteOptions
-    )
+      password,
+      email_confirm: false,
+      user_metadata: { full_name },
+    })
     if (createErr) throw createErr
 
     const { error: insertErr } = await supabaseAdmin.from('profiles').insert([{
@@ -69,6 +75,8 @@ serve(async (req) => {
     }])
 
     if (insertErr) {
+      // Roll back the auth user if the profile insert fails, so we never
+      // end up with an orphaned login that has no profile/permissions row.
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
       throw insertErr
     }

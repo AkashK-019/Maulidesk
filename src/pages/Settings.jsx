@@ -31,6 +31,8 @@ export default function Settings() {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserFullName, setNewUserFullName] = useState('');
   const [newUserRole, setNewUserRole] = useState('Staff');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
   const [newUserPermissions, setNewUserPermissions] = useState({
     dashboard: true,
     projects: true,
@@ -39,6 +41,16 @@ export default function Settings() {
     labour: true,
     finance: true
   });
+
+  // Generates a readable-but-strong random password, e.g. "Tq7-mVx4-Kp9L"
+  const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    const randomChunk = (len) =>
+      Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const generated = `${randomChunk(4)}-${randomChunk(4)}-${randomChunk(4)}`;
+    setNewUserPassword(generated);
+    setShowNewUserPassword(true);
+  };
 
   // User edit state
   const [editingUser, setEditingUser] = useState(null);
@@ -136,6 +148,11 @@ export default function Settings() {
     e.preventDefault();
     if (!isAdmin) return; // guard
 
+    if (newUserPassword.length < 6) {
+      alert('Password must be at least 6 characters.');
+      return;
+    }
+
     setAddUserLoading(true);
     try {
       const allowedPages = Object.keys(newUserPermissions).filter(page => newUserPermissions[page]);
@@ -145,7 +162,8 @@ export default function Settings() {
           email: newUserEmail,
           full_name: newUserFullName,
           role: newUserRole,
-          allowed_pages: allowedPages
+          allowed_pages: allowedPages,
+          password: newUserPassword
         }
       });
 
@@ -159,7 +177,15 @@ export default function Settings() {
       }
       if (data?.error) throw new Error(data.error);
 
-      alert(`Invitation email sent to ${newUserEmail}!`);
+      // Show the admin the password once, so it can be shared with the new user.
+      // Supabase never emails the password itself.
+      alert(
+        `Account created for ${newUserEmail}.\n\n` +
+        `Share these login details with them:\n` +
+        `Email: ${newUserEmail}\n` +
+        `Password: ${newUserPassword}\n\n` +
+        `A confirmation email has also been sent to activate the account.`
+      );
       setShowAddUserModal(false);
       fetchSettingsAndUsers();
 
@@ -167,6 +193,8 @@ export default function Settings() {
       setNewUserEmail('');
       setNewUserFullName('');
       setNewUserRole('Staff');
+      setNewUserPassword('');
+      setShowNewUserPassword(false);
     } catch (err) {
       console.error('Add user error:', err);
       alert(`Add user failed: ${err.message}`);
@@ -590,6 +618,8 @@ export default function Settings() {
                         setNewUserEmail('');
                         setNewUserFullName('');
                         setNewUserRole('Staff');
+                        setNewUserPassword('');
+                        setShowNewUserPassword(false);
                         setNewUserPermissions({ dashboard: true, projects: true, quotations: true, inventory: true, labour: true, finance: true });
                         setShowAddUserModal(true);
                       }}>
@@ -696,6 +726,41 @@ export default function Settings() {
                       </div>
                     </div>
 
+                    <div className="form-group">
+                      <label>Set User Password *</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type={showNewUserPassword ? 'text' : 'password'}
+                          className="input-field"
+                          required
+                          minLength={6}
+                          placeholder="At least 6 characters"
+                          value={newUserPassword}
+                          onChange={(e) => setNewUserPassword(e.target.value)}
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ whiteSpace: 'nowrap' }}
+                          onClick={generateRandomPassword}
+                        >
+                          Generate
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                          title={showNewUserPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showNewUserPassword ? 'Hide' : 'Show'}
+                        </button>
+                      </div>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #888)', marginTop: '0.35rem' }}>
+                        You'll need to share this password with the user yourself — it will be shown once after creation and is never emailed.
+                      </p>
+                    </div>
+
                     {/* Permissions list (Only relevant for non-admin) */}
                     {newUserRole === 'Staff' && (
                       <div style={{ marginTop: '1rem' }}>
@@ -721,7 +786,7 @@ export default function Settings() {
                   <div className="modal-footer">
                     <button type="button" className="btn-secondary" onClick={() => setShowAddUserModal(false)}>Cancel</button>
                     <button type="submit" className="btn-primary" disabled={addUserLoading}>
-                      {addUserLoading ? 'Sending Invite...' : 'Send Invite'}
+                      {addUserLoading ? 'Creating Account...' : 'Create User'}
                     </button>
                   </div>
                 </form>
