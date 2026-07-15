@@ -180,8 +180,8 @@ export default function Settings() {
       // Show the admin the password once, so it can be shared with the new user.
       // Supabase never emails the password itself.
       const emailStatusLine = data?.email_sent
-        ? 'A welcome email has been sent to them.'
-        : `Note: the welcome email could not be sent (${data?.email_error || 'unknown error'}). Please inform them directly.`;
+        ? 'An activation email has been sent. They cannot log in until they click "Accept & Activate Account" in that email.'
+        : `Note: the activation email could not be sent (${data?.email_error || 'unknown error'}). They will not be able to log in until this is resolved — try again or contact support.`;
 
       alert(
         `Account created for ${newUserEmail}.\n\n` +

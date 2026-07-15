@@ -53,25 +53,32 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Direct-create flow: the Admin sets the password themselves, right here.
-    // Note: admin.createUser() never auto-sends a confirmation email (only
-    // inviteUserByEmail()/client signUp() do that) — so relying on an email
-    // step here would leave the account stuck at "waiting for verification"
-    // forever unless something else triggers it. Since the Admin already
-    // knows and is directly assigning this person's email + password, we
-    // skip email confirmation entirely: email_confirm: true activates the
-    // account immediately so they can log in right away with the
-    // credentials the Admin gives them.
-    const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+    const siteUrl = Deno.env.get('SITE_URL') ?? ''
+
+    // Unconfirmed-until-clicked flow: the Admin sets the password, but the
+    // account is created UNCONFIRMED. Supabase blocks password sign-in for
+    // unconfirmed accounts ("Email not confirmed" error), so the staff
+    // member genuinely cannot log in until they click the activation link
+    // we email them below. generateLink() with type 'signup' both creates
+    // the user AND returns a real, working confirmation link in one step —
+    // that link is what we put in our own custom email (Supabase's default
+    // "Confirm signup" template is not used here).
+    const { data: linkData, error: createErr } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'signup',
       email,
       password,
-      email_confirm: true,
-      user_metadata: { full_name },
+      options: {
+        data: { full_name },
+        redirectTo: siteUrl ? `${siteUrl}/login` : undefined,
+      },
     })
     if (createErr) throw createErr
 
+    const newUserId = linkData.user.id
+    const activationLink = linkData.properties.action_link
+
     const { error: insertErr } = await supabaseAdmin.from('profiles').insert([{
-      id: newUser.user.id,
+      id: newUserId,
       email,
       full_name,
       role: role || 'Staff',
@@ -81,17 +88,15 @@ serve(async (req) => {
     if (insertErr) {
       // Roll back the auth user if the profile insert fails, so we never
       // end up with an orphaned login that has no profile/permissions row.
-      await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
+      await supabaseAdmin.auth.admin.deleteUser(newUserId)
       throw insertErr
     }
 
-    // Send a welcome/acceptance email via Resend, using the same API key
-    // configured as your Supabase Auth SMTP password. This is a direct call
-    // to Resend's API (not Supabase Auth's mailer), since admin.createUser()
-    // has no automatic email step. The password itself is never included in
-    // the email — the Admin shares that separately, out of band.
+    // Send the real activation link via Resend. Until the staff member
+    // clicks this, their account stays unconfirmed and they cannot sign in
+    // — even with the correct email + password. The password itself is
+    // never included in the email — the Admin shares that separately.
     const resendApiKey = Deno.env.get('RESEND_API_KEY')
-    const siteUrl = Deno.env.get('SITE_URL') ?? ''
     let emailSent = false
     let emailError = null
 
@@ -106,17 +111,18 @@ serve(async (req) => {
           body: JSON.stringify({
             from: 'Mauli Decorators <onboarding@resend.dev>',
             to: email,
-            subject: 'Your Mauli Decorators account is ready',
+            subject: 'Activate your Mauli Decorators account',
             html: `
               <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
                 <h2>Welcome to Mauli Decorators, ${full_name || ''}!</h2>
                 <p>An account has been created for you on the Mauli Decorators dashboard.</p>
-                <p>Your admin will share your login email and password with you separately.</p>
+                <p><strong>You must accept this invitation before you can log in.</strong></p>
                 <p style="margin: 24px 0;">
-                  <a href="${siteUrl}/login" style="background:#0d9488;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">
-                    Accept &amp; Go to Login
+                  <a href="${activationLink}" style="background:#0d9488;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">
+                    Accept &amp; Activate Account
                   </a>
                 </p>
+                <p>Your admin will share your login email and password with you separately.</p>
                 <p style="font-size:12px;color:#888;">If you weren't expecting this, you can ignore this email.</p>
               </div>
             `,
@@ -137,7 +143,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      user_id: newUser.user.id,
+      user_id: newUserId,
       email_sent: emailSent,
       email_error: emailSent ? null : emailError,
     }), {
