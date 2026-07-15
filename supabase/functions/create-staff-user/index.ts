@@ -54,14 +54,18 @@ serve(async (req) => {
     )
 
     // Direct-create flow: the Admin sets the password themselves, right here.
-    // email_confirm: false means Supabase still emails the user a confirmation
-    // link (via the "Confirm signup" template) which they must click to
-    // activate the account, but the password is already set — no separate
-    // "set your password" step is needed on their end.
+    // Note: admin.createUser() never auto-sends a confirmation email (only
+    // inviteUserByEmail()/client signUp() do that) — so relying on an email
+    // step here would leave the account stuck at "waiting for verification"
+    // forever unless something else triggers it. Since the Admin already
+    // knows and is directly assigning this person's email + password, we
+    // skip email confirmation entirely: email_confirm: true activates the
+    // account immediately so they can log in right away with the
+    // credentials the Admin gives them.
     const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
+      email_confirm: true,
       user_metadata: { full_name },
     })
     if (createErr) throw createErr
@@ -81,7 +85,62 @@ serve(async (req) => {
       throw insertErr
     }
 
-    return new Response(JSON.stringify({ success: true, user_id: newUser.user.id }), {
+    // Send a welcome/acceptance email via Resend, using the same API key
+    // configured as your Supabase Auth SMTP password. This is a direct call
+    // to Resend's API (not Supabase Auth's mailer), since admin.createUser()
+    // has no automatic email step. The password itself is never included in
+    // the email — the Admin shares that separately, out of band.
+    const resendApiKey = Deno.env.get('RESEND_API_KEY')
+    const siteUrl = Deno.env.get('SITE_URL') ?? ''
+    let emailSent = false
+    let emailError = null
+
+    if (resendApiKey) {
+      try {
+        const emailRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Mauli Decorators <onboarding@resend.dev>',
+            to: email,
+            subject: 'Your Mauli Decorators account is ready',
+            html: `
+              <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+                <h2>Welcome to Mauli Decorators, ${full_name || ''}!</h2>
+                <p>An account has been created for you on the Mauli Decorators dashboard.</p>
+                <p>Your admin will share your login email and password with you separately.</p>
+                <p style="margin: 24px 0;">
+                  <a href="${siteUrl}/login" style="background:#0d9488;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;">
+                    Accept &amp; Go to Login
+                  </a>
+                </p>
+                <p style="font-size:12px;color:#888;">If you weren't expecting this, you can ignore this email.</p>
+              </div>
+            `,
+          }),
+        })
+
+        if (!emailRes.ok) {
+          emailError = await emailRes.text()
+        } else {
+          emailSent = true
+        }
+      } catch (e) {
+        emailError = e.message
+      }
+    } else {
+      emailError = 'RESEND_API_KEY secret is not set'
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      user_id: newUser.user.id,
+      email_sent: emailSent,
+      email_error: emailSent ? null : emailError,
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
