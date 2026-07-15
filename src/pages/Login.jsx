@@ -41,25 +41,43 @@ export default function Login() {
 
     setSubmitting(true);
 
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('email', email)
-      .single();
+    // Anonymous visitors can't read `profiles` directly (RLS correctly
+    // blocks that), so this check goes through a small Edge Function that
+    // uses the service role to safely answer just "is this email an Admin?"
+    // without exposing any other profile data.
+    let checkResult;
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke('check-admin-email', {
+        body: { email },
+      });
+      if (fnErr) {
+        let message = fnErr.message;
+        try {
+          const body = await fnErr.context.json();
+          if (body?.error) message = body.error;
+        } catch {}
+        throw new Error(message);
+      }
+      checkResult = data;
+    } catch (err) {
+      setSubmitting(false);
+      setErrorMsg('Could not verify this email right now. Please try again.');
+      return;
+    }
 
-    if (profileError || !profile) {
+    if (!checkResult?.exists) {
       setSubmitting(false);
       setErrorMsg('This email is not registered in the system.');
       return;
     }
 
-    if (profile.role !== 'Admin') {
+    if (!checkResult.isAdmin) {
       setSubmitting(false);
       setErrorMsg('Password reset is not allowed for staff accounts. Please contact your admin.');
       return;
     }
 
-    // Step 2 — Admin confirmed → send reset link
+    // Confirmed Admin → send the actual reset link
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
