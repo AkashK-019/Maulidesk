@@ -177,18 +177,16 @@ export default function Settings() {
       }
       if (data?.error) throw new Error(data.error);
 
-      // Show the admin the password once, so it can be shared with the new user.
-      // Supabase never emails the password itself.
-      const emailStatusLine = data?.email_sent
-        ? 'An activation email has been sent. They cannot log in until they click "Accept & Activate Account" in that email.'
-        : `Note: the activation email could not be sent (${data?.email_error || 'unknown error'}). They will not be able to log in until this is resolved — try again or contact support.`;
-
+      // Account is created active immediately — no activation email or
+      // confirmation step required. Show the admin the password once, so
+      // it can be shared with the new user. Supabase never emails the
+      // password itself.
       alert(
         `Account created for ${newUserEmail}.\n\n` +
+        `The account is active — they can sign in right away.\n\n` +
         `Share these login details with them:\n` +
         `Email: ${newUserEmail}\n` +
-        `Password: ${newUserPassword}\n\n` +
-        `${emailStatusLine}`
+        `Password: ${newUserPassword}`
       );
       setShowAddUserModal(false);
       fetchSettingsAndUsers();
@@ -761,7 +759,7 @@ export default function Settings() {
                         </button>
                       </div>
                       <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #888)', marginTop: '0.35rem' }}>
-                        You'll need to share this password with the user yourself — it will be shown once after creation and is never emailed.
+                        The account will be active immediately — no activation email required. You'll need to share this password with the user yourself; it's shown once after creation and is never emailed.
                       </p>
                     </div>
 
