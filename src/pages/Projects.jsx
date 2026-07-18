@@ -15,6 +15,10 @@ const EVENT_TYPES = ['Wedding', 'Birthday', 'Corporate', 'Anniversary', 'Engagem
 const STATUS_FILTERS = ['All', 'Active', 'Completed', 'Cancelled'];
 const STATUS_OPTIONS  = ['Active', 'Completed', 'Cancelled'];
 
+/* Rounding tolerance: any pending balance at or below this is treated as
+   Fully Paid, so negligible paisa-level differences don't show as "Pending". */
+const PENDING_ROUND_TOLERANCE = 1;
+
 const STATUS_CONFIG = {
   Active:    { color: '#2563eb', bg: '#eff6ff' },
   Completed: { color: '#10b981', bg: '#ecfdf5' },
@@ -316,9 +320,9 @@ export default function Projects() {
                           <span className="prj-fin-val">{formatCurrency(p.invoiceTotal)}</span>
                         </div>
                         <div className="prj-fin-item">
-                          <span className="prj-fin-lbl">{p.pending > 0.01 ? 'Pending' : 'Collected'}</span>
-                          <span className={`prj-fin-val ${p.pending > 0.01 ? 'due' : 'paid'}`}>
-                            {p.pending > 0.01 ? formatCurrency(p.pending) : 'Fully Paid'}
+                          <span className="prj-fin-lbl">{p.pending > PENDING_ROUND_TOLERANCE ? 'Pending' : 'Collected'}</span>
+                          <span className={`prj-fin-val ${p.pending > PENDING_ROUND_TOLERANCE ? 'due' : 'paid'}`}>
+                            {p.pending > PENDING_ROUND_TOLERANCE ? formatCurrency(p.pending) : 'Fully Paid'}
                           </span>
                         </div>
                       </div>

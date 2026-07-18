@@ -32,7 +32,7 @@ const COMPANY_DEFAULTS = {
 /* ─── Constants ─── */
 const EVENT_TYPES    = ['Wedding','Birthday','Corporate','Anniversary','Engagement','Other'];
 const STATUS_FILTERS = ['All','Pending','Approved'];
-const UNITS          = ['Nos','Sq.ft','Meter','Days','hr','Rolls'];
+const UNITS          = ['Nos','Sq.ft','Run.ft','Meter','Days','hr','Rolls'];
 const GST_OPTIONS    = [0, 5, 12, 18, 28];
 const ITEM_SUGGESTIONS = [
   'Chair','Plastic Chair','Shivari Chair','Modi Chair','VIP Chair',
@@ -204,13 +204,13 @@ const genQuotationNumber = async (sb) => {
     const { data } = await sb
       .from('quotations')
       .select('quotation_number')
-      .like('quotation_number', `${prefix}%`)
-      .order('quotation_number', { ascending: false })
-      .limit(1);
-    if (data && data.length > 0) {
-      const lastNum = parseInt(data[0].quotation_number.replace(prefix,''), 10);
-      return `${prefix}${String(isNaN(lastNum) ? 1 : lastNum + 1).padStart(3,'0')}`;
-    }
+      .like('quotation_number', `${prefix}%`);
+    let maxNum = 0;
+    (data || []).forEach(row => {
+      const n = parseInt(String(row.quotation_number || '').replace(prefix, ''), 10);
+      if (!isNaN(n) && n > maxNum) maxNum = n;
+    });
+    return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
   } catch {}
   return `${prefix}001`;
 };

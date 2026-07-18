@@ -7,7 +7,7 @@ import { formatCurrency } from '../utils/helpers';
 import '../styles/quotations.css';
 import '../styles/inventory.css';
 
-const UNIT_OPTIONS = ['NOS', 'sq-feet', 'meter', 'feet', 'bundle'];
+const UNIT_OPTIONS = ['NOS', 'sq-feet','Run.feet' , 'meter', 'feet', 'bundle'];
 
 function CategoryCombobox({ value, onChange, options }) {
   const [open, setOpen] = useState(false);

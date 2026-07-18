@@ -2,7 +2,8 @@ import { useState } from 'react';
 import {
   Receipt, Printer, Download, MessageCircle,
   MapPin, Calendar, Phone, Mail, Loader2,
-  CheckCircle, Clock, AlertTriangle, Plus, X
+  CheckCircle, Clock, AlertTriangle, Plus, X,
+  Pencil, Check
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/helpers';
 import {
@@ -100,13 +101,13 @@ const genDirectInvoiceNumber = async (sb, fy) => {
     const { data } = await sb
       .from('invoices')
       .select('invoice_number')
-      .like('invoice_number', `${prefix}%`)
-      .order('invoice_number', { ascending: false })
-      .limit(1);
-    if (data && data.length > 0) {
-      const lastNum = parseInt(data[0].invoice_number.replace(prefix,''), 10);
-      return `${prefix}${String(isNaN(lastNum) ? 1 : lastNum + 1).padStart(3,'0')}`;
-    }
+      .like('invoice_number', `${prefix}%`);
+    let maxNum = 0;
+    (data || []).forEach(row => {
+      const n = parseInt(String(row.invoice_number || '').replace(prefix, ''), 10);
+      if (!isNaN(n) && n > maxNum) maxNum = n;
+    });
+    return `${prefix}${String(maxNum + 1).padStart(3, '0')}`;
   } catch {}
   return `${prefix}001`;
 };
@@ -125,6 +126,9 @@ export default function TaxInvoiceTab({ invoice, company, project, onInvoiceCrea
   const [form, setForm]                 = useState(null);
   const [items, setItems]               = useState([blankItem()]);
   const [saving, setSaving]             = useState(false);
+  const [editingDate, setEditingDate]   = useState(false);
+  const [dateValue, setDateValue]       = useState('');
+  const [savingDate, setSavingDate]     = useState(false);
 
   const f = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
   const addItem    = () => setItems(prev => [...prev, blankItem()]);
@@ -376,6 +380,34 @@ export default function TaxInvoiceTab({ invoice, company, project, onInvoiceCrea
     }
   };
 
+  const openDateEdit = () => {
+    setDateValue(invoice.invoice_date || todayStr());
+    setEditingDate(true);
+  };
+
+  const cancelDateEdit = () => {
+    setEditingDate(false);
+    setDateValue('');
+  };
+
+  const handleSaveInvoiceDate = async () => {
+    if (!dateValue) return;
+    setSavingDate(true);
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ invoice_date: dateValue })
+        .eq('id', invoice.id);
+      if (error) throw error;
+      setEditingDate(false);
+      onInvoiceCreated?.();
+    } catch (err) {
+      alert('Failed to update invoice date: ' + err.message);
+    } finally {
+      setSavingDate(false);
+    }
+  };
+
   let lineItems = [];
   try {
     if (invoice.items) {
@@ -434,7 +466,49 @@ export default function TaxInvoiceTab({ invoice, company, project, onInvoiceCrea
         <div className="pd-info-card">
           <p className="pd-info-label">Invoice Details</p>
           <p className="pd-info-val">{invoice.event_type || '—'}</p>
-          {invoice.invoice_date && <p className="pd-info-meta"><Calendar size={11} /> Invoice Date: {formatDateLocal(invoice.invoice_date)}</p>}
+          {editingDate ? (
+            <div className="pd-info-meta" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Calendar size={11} />
+              <input
+                type="date"
+                className="input-field"
+                style={{ padding: '2px 6px', fontSize: '0.8rem', width: 140 }}
+                value={dateValue}
+                onChange={e => setDateValue(e.target.value)}
+                disabled={savingDate}
+              />
+              <button type="button" title="Save" onClick={handleSaveInvoiceDate} disabled={savingDate}
+                style={{ background: '#10b981', border: 'none', borderRadius: 4, color: '#fff', width: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                {savingDate ? <Loader2 size={12} className="spin" /> : <Check size={12} />}
+              </button>
+              <button type="button" title="Cancel" onClick={cancelDateEdit} disabled={savingDate}
+                style={{ background: '#f1f5f9', border: 'none', borderRadius: 4, color: '#64748b', width: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <X size={12} />
+              </button>
+            </div>
+          ) : (
+            invoice.invoice_date && (
+              <p className="pd-info-meta" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Calendar size={11} /> Invoice Date: {formatDateLocal(invoice.invoice_date)}
+                <button type="button" title="Edit invoice date" onClick={openDateEdit}
+                  style={{
+                    background: '#eef2ff',
+                    border: '1px solid #c7d2fe',
+                    borderRadius: 5,
+                    cursor: 'pointer',
+                    padding: 4,
+                    marginLeft: 4,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#4f46e5',
+                    lineHeight: 0,
+                  }}>
+                  <Pencil size={13} />
+                </button>
+              </p>
+            )
+          )}
           {invoice.client_gst && <p className="pd-info-meta">Client GSTIN: {invoice.client_gst}</p>}
         </div>
         <div className="pd-info-card">
