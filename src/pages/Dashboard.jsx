@@ -5,11 +5,14 @@ import Header from '../components/Header';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
 import {
-  FileText, TrendingUp, Users, Package,
+  FileText, TrendingUp, Users,
   ArrowRight, Loader2, RefreshCw, Landmark
 } from 'lucide-react';
 import { formatCurrency } from '../utils/helpers';
 import '../styles/dashboard.css';
+
+// Rounding dust under ₹1 shouldn't count as a real unpaid/partial balance.
+const NEGLIGIBLE_BALANCE = 1;
 
 export default function Dashboard() {
   const { profile } = useAuth();
@@ -22,7 +25,6 @@ export default function Dashboard() {
     unpaidInvoicesCount: 0,
     unpaidInvoicesValue: 0,
     labourCount: 0,
-    lowStockCount: 0,
   });
   const [recentQuotes, setRecentQuotes] = useState([]);
   const [recentInvoices, setRecentInvoices] = useState([]);
@@ -49,7 +51,7 @@ export default function Dashboard() {
         if (i.status === 'Paid') return false;
         const total = parseFloat(i.total_amount) || 0;
         const paid = parseFloat(i.amount_paid) || 0;
-        return (total - paid) > 0.001; 
+        return (total - paid) > NEGLIGIBLE_BALANCE;
       });
       const unpaidInvoicesVal = unpaidInvoices.reduce((acc, i) => {
         const total = parseFloat(i.total_amount) || 0;
@@ -61,14 +63,6 @@ export default function Dashboard() {
         .from('labour_master')
         .select('*', { count: 'exact', head: true });
 
-      const { data: inventory } = await supabase
-        .from('inventory_items')
-        .select('quantity_available, low_stock_threshold');
-
-      const lowStockCount = (inventory || []).filter(i => 
-        Number(i.quantity_available) < Number(i.low_stock_threshold)
-      ).length;
-
       const { data: recentQ } = await supabase
         .from('quotations')
         .select('id, quotation_number, client_name, total_amount, status')
@@ -77,7 +71,7 @@ export default function Dashboard() {
 
       const { data: recentI } = await supabase
         .from('invoices')
-        .select('id, invoice_number, client_name, total_amount, status')
+        .select('id, invoice_number, client_name, total_amount, amount_paid, status')
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -87,7 +81,6 @@ export default function Dashboard() {
         unpaidInvoicesCount: unpaidInvoices.length,
         unpaidInvoicesValue: unpaidInvoicesVal,
         labourCount: labourCount || 0,
-        lowStockCount: lowStockCount || 0
       });
 
       setRecentQuotes(recentQ || []);
@@ -98,6 +91,14 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getEffectiveInvoiceStatus = (inv) => {
+    if (inv.status === 'Paid' || inv.status === 'Cancelled') return inv.status;
+    const total = parseFloat(inv.total_amount) || 0;
+    const paid = parseFloat(inv.amount_paid) || 0;
+    if (total - paid <= NEGLIGIBLE_BALANCE) return 'Paid';
+    return inv.status;
   };
 
   const getStatusBadge = (status) => {
@@ -184,19 +185,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Low Stock Items */}
-                <div className="db-kpi-card">
-                  <div className="db-kpi-icon" style={{ backgroundColor: kpis.lowStockCount > 0 ? '#fee2e2' : 'var(--primary-subtle)' }}>
-                    <Package size={20} style={{ color: kpis.lowStockCount > 0 ? '#ef4444' : 'var(--primary)' }} />
-                  </div>
-                  <div className="db-kpi-content">
-                    <span className="db-kpi-value" style={{ color: kpis.lowStockCount > 0 ? '#ef4444' : 'var(--primary)' }}>
-                      {kpis.lowStockCount}
-                    </span>
-                    <span className="db-kpi-label">Low Stock items</span>
-                  </div>
-                </div>
-
               </div>
 
               {/* Lists Section */}
@@ -257,7 +245,7 @@ export default function Dashboard() {
                             <span className="recent-subtitle">{i.client_name}</span>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            {getStatusBadge(i.status)}
+                            {getStatusBadge(getEffectiveInvoiceStatus(i))}
                             <span className="recent-amount">{formatCurrency(i.total_amount)}</span>
                           </div>
                         </div>

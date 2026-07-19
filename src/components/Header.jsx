@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Menu, Loader2, ArrowRight, X } from 'lucide-react';
 import { supabase } from '../supabase';
+import { getShiftMultiplier } from '../utils/attendanceCodes';
 
 export default function Header({ title }) {
   const navigate = useNavigate();
@@ -33,41 +34,96 @@ export default function Header({ title }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const NEGLIGIBLE_BALANCE = 1; // ignore rounding dust under ₹1 — not a real due amount
+
   const fetchRealtimeAlerts = async () => {
     setLoadingAlerts(true);
     try {
       const todayStr = new Date().toISOString().split('T')[0];
       const activeAlerts = [];
 
+      // ---------- Overdue invoices ----------
       const { data: invoices } = await supabase
         .from('invoices')
-        .select('invoice_number, due_date')
-        .in('status', ['Unpaid', 'Overdue'])
+        .select('invoice_number, due_date, total_amount, amount_paid, status')
         .lt('due_date', todayStr);
 
       (invoices || []).forEach(inv => {
+        if (inv.status === 'Paid' || inv.status === 'Cancelled') return;
+        const total = parseFloat(inv.total_amount) || 0;
+        const paid = parseFloat(inv.amount_paid) || 0;
+        const remaining = total - paid;
+        if (remaining <= NEGLIGIBLE_BALANCE) return;
         activeAlerts.push({
           id: `invoice-${inv.invoice_number}`,
-          text: `Invoice #${inv.invoice_number} is overdue (due ${inv.due_date})`,
+          text: `Invoice #${inv.invoice_number} payment is late (due ${inv.due_date})`,
           type: 'danger',
           to: '/invoices'
         });
       });
 
-      // Query Low Stock Decorator Items
-      const { data: items } = await supabase
-        .from('inventory_items')
-        .select('name, quantity_available, low_stock_threshold');
+      // ---------- Pending quotations awaiting a decision ----------
+      const { data: quotations } = await supabase
+        .from('quotations')
+        .select('quotation_number, client_name, status')
+        .in('status', ['Pending', 'Sent']);
 
-      (items || []).forEach(item => {
-        if (Number(item.quantity_available) < Number(item.low_stock_threshold)) {
-          activeAlerts.push({
-            id: `inventory-${item.name}`,
-            text: `Low stock: "${item.name}" (${item.quantity_available} left)`,
-            type: 'warning',
-            to: '/inventory'
-          });
-        }
+      (quotations || []).forEach(q => {
+        activeAlerts.push({
+          id: `quotation-${q.quotation_number}`,
+          text: `Quotation #${q.quotation_number} for ${q.client_name || 'client'} needs a reply`,
+          type: 'warning',
+          to: '/quotations'
+        });
+      });
+
+      // ---------- Labour payments still owed ----------
+      // Individuals earn via labour_attendance; crews earn via labour_crew_attendance
+      // (per member). Paid comes from labour_payments (lump-sum) plus
+      // labour_member_payments (per crew member). Balance = earned - paid.
+      const [
+        { data: labourers },
+        { data: labourAttendance },
+        { data: labourPayments },
+        { data: crewAttendance },
+        { data: memberPayments },
+      ] = await Promise.all([
+        supabase.from('labour_master').select('id, name, daily_wage, labour_type'),
+        supabase.from('labour_attendance').select('labour_id, status'),
+        supabase.from('labour_payments').select('labour_id, amount_paid'),
+        supabase.from('labour_crew_attendance').select('labour_id, status'),
+        supabase.from('labour_member_payments').select('labour_id, amount_paid'),
+      ]);
+
+      const balanceByLabour = {};
+      (labourers || []).forEach(l => { balanceByLabour[l.id] = 0; });
+
+      (labourAttendance || []).forEach(a => {
+        const lab = (labourers || []).find(l => l.id === a.labour_id);
+        if (!lab || lab.labour_type === 'Group Leader' || !(a.labour_id in balanceByLabour)) return;
+        balanceByLabour[a.labour_id] += (parseFloat(lab.daily_wage) || 0) * getShiftMultiplier(a.status);
+      });
+      (crewAttendance || []).forEach(a => {
+        const lab = (labourers || []).find(l => l.id === a.labour_id);
+        if (!lab || !(a.labour_id in balanceByLabour)) return;
+        balanceByLabour[a.labour_id] += (parseFloat(lab.daily_wage) || 0) * getShiftMultiplier(a.status);
+      });
+      (labourPayments || []).forEach(p => {
+        if (p.labour_id in balanceByLabour) balanceByLabour[p.labour_id] -= (parseFloat(p.amount_paid) || 0);
+      });
+      (memberPayments || []).forEach(p => {
+        if (p.labour_id in balanceByLabour) balanceByLabour[p.labour_id] -= (parseFloat(p.amount_paid) || 0);
+      });
+
+      (labourers || []).forEach(l => {
+        const balance = balanceByLabour[l.id] || 0;
+        if (balance <= NEGLIGIBLE_BALANCE) return;
+        activeAlerts.push({
+          id: `labour-payment-${l.id}`,
+          text: `Pay ₹${balance.toFixed(2)} to ${l.name}`,
+          type: 'warning',
+          to: '/labour'
+        });
       });
 
       sessionStorage.setItem('alerts_cache', JSON.stringify(activeAlerts));
@@ -111,13 +167,15 @@ export default function Header({ title }) {
         {/* Notification bell */}
         <div className="gs-notif-wrap" ref={dropdownRef}>
           <button
-            className="gs-bell-btn"
+            className={`gs-bell-btn ${alerts.length > 0 ? (dangerCount > 0 ? 'has-alerts danger' : 'has-alerts warning') : ''}`}
             onClick={() => setShowNotifications(v => !v)}
             title="Alerts"
           >
             <Bell size={16} />
             {alerts.length > 0 && (
-              <span className={`gs-bell-dot ${dangerCount > 0 ? 'danger' : 'warning'}`} />
+              <span className={`gs-bell-badge ${dangerCount > 0 ? 'danger' : 'warning'}`}>
+                {alerts.length > 9 ? '9+' : alerts.length}
+              </span>
             )}
           </button>
 
@@ -269,15 +327,65 @@ export default function Header({ title }) {
           color: #0d9488;
         }
 
-        .gs-bell-dot {
-          position: absolute;
-          top: 7px;
-          right: 7px;
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          border: 1.5px solid white;
+        .gs-bell-btn.has-alerts.danger {
+          background: #fef2f2;
+          border-color: #fecaca;
+          color: #dc2626;
+          animation: bell-shake 4s ease-in-out infinite;
         }
+
+        .gs-bell-btn.has-alerts.warning {
+          background: #fffbeb;
+          border-color: #fde68a;
+          color: #b45309;
+        }
+
+        .gs-bell-btn.has-alerts.danger::before {
+          content: '';
+          position: absolute;
+          inset: -3px;
+          border-radius: 12px;
+          border: 1.5px solid #ef4444;
+          opacity: 0;
+          animation: bell-pulse 2s ease-out infinite;
+        }
+
+        @keyframes bell-pulse {
+          0%   { opacity: 0.55; transform: scale(1); }
+          70%  { opacity: 0; transform: scale(1.35); }
+          100% { opacity: 0; transform: scale(1.35); }
+        }
+
+        @keyframes bell-shake {
+          0%, 92%, 100% { transform: rotate(0); }
+          93% { transform: rotate(-10deg); }
+          94% { transform: rotate(9deg); }
+          95% { transform: rotate(-7deg); }
+          96% { transform: rotate(5deg); }
+          97% { transform: rotate(-3deg); }
+          98% { transform: rotate(0); }
+        }
+
+        .gs-bell-badge {
+          position: absolute;
+          top: -5px;
+          right: -5px;
+          min-width: 17px;
+          height: 17px;
+          padding: 0 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 999px;
+          border: 2px solid white;
+          font-size: 0.62rem;
+          font-weight: 800;
+          line-height: 1;
+          color: #ffffff;
+        }
+
+        .gs-bell-badge.danger { background: #ef4444; }
+        .gs-bell-badge.warning { background: #f59e0b; }
 
         .gs-notif-dropdown {
           position: absolute;

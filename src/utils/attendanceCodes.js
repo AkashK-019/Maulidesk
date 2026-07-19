@@ -4,6 +4,7 @@ export const SHIFT_CODES = [
   { code: 'P',    label: 'Present',           multiplier: 1,   tone: 'present' },
   { code: 'P1/2', label: "Up to 9 O'Clock",   multiplier: 1.5, tone: 'onehalf' },
   { code: 'PP',   label: "Up to 12 O'Clock",  multiplier: 2,   tone: 'double' },
+  { code: 'PP1/2',label: "Up to 2 O'Clock",   multiplier: 2.5, tone: 'doublehalf' },
   { code: 'PPP',  label: "Up to 4 O'Clock",   multiplier: 3,   tone: 'triple' },
 ];
 
