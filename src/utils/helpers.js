@@ -13,7 +13,6 @@ export function formatCurrency(amount) {
 }
 
 /**
- * Formats standard date strings into user-friendly display dates.
  * @param {string|Date} dateStr - Date object or date string
  * @returns {string} - Formatted date (e.g., Jun 11, 2026)
  */
@@ -29,9 +28,6 @@ export function formatDate(dateStr) {
 }
 
 /**
- * Calculates GST components (CGST+SGST vs IGST) based on location.
- * If clientState is Maharashtra (or matches companyState), apply CGST and SGST.
- * Otherwise, apply IGST.
  * @param {number} amount - Base amount
  * @param {string} clientState - State of the client
  * @param {string} companyState - State of the company (defaults to Maharashtra)
@@ -71,9 +67,6 @@ export function calculateGST(amount, clientState = 'Maharashtra', companyState =
   };
 }
 
-/**
- * List of Indian states for address selectors
- */
 export const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 
   'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 

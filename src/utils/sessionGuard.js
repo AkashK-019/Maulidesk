@@ -25,7 +25,6 @@ export async function initSessionGuard() {
   const gap = Date.now() - lastBeat;
 
   if (lastBeat && gap > CLOSED_THRESHOLD_MS) {
-    // No tab kept the heartbeat alive for a while — the browser/all tabs were closed.
     try {
       await supabase.auth.signOut();
     } catch (err) {
@@ -33,7 +32,6 @@ export async function initSessionGuard() {
     }
   }
 
-  // Start (or restart) this tab's heartbeat.
   localStorage.setItem(HEARTBEAT_KEY, Date.now().toString());
   setInterval(() => {
     localStorage.setItem(HEARTBEAT_KEY, Date.now().toString());

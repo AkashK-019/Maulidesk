@@ -1,7 +1,6 @@
 .prj-page-head  { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
 .prj-page-title { font-size: 1.45rem; font-weight: 700; color: #1e2530; margin: 0 0 .2rem; }
 
-/* ── Add button ── */
 .prj-add-btn {
   display: inline-flex; align-items: center; gap: .45rem;
   padding: .55rem 1.1rem;
@@ -21,7 +20,6 @@
 .prj-metric-val  { font-size: 1.3rem; font-weight: 700; color: #1e2530; line-height: 1.1; }
 .prj-metric-lbl  { font-size: .72rem; color: #7c8a92; font-weight: 500; margin-top: 2px; }
 
-/* ── Toolbar (search + status filter pills) ── */
 .prj-toolbar     { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
 .prj-search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 340px; }
 .prj-search-icon { position: absolute; left: .8rem; top: 50%; transform: translateY(-50%); color: #7c8a92; pointer-events: none; }
@@ -46,7 +44,6 @@
 .prj-loading { display: flex; justify-content: center; align-items: center; min-height: 220px; }
 .prj-empty   { text-align: center; padding: 3.5rem 1rem; color: #7c8a92; font-size: .9rem; background: #fff; border: 1px solid #dbe4e3; border-radius: 14px; }
 
-/* ── Grid of project cards ── */
 .prj-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(315px, 1fr));
@@ -54,7 +51,6 @@
   margin-top: 0.5rem;
 }
 
-/* ── Single project card ── */
 .prj-card {
   background: #fff;
   border: 1px solid #dbe4e3;
@@ -74,7 +70,6 @@
   border-color: #5eead4;
 }
 
-/* Card header: icon + edit/delete action cluster */
 .prj-card-head    { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
 .prj-card-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 
@@ -98,10 +93,6 @@
 .prj-card-action-btn:hover            { background: #eef5f4; border-color: #c3d1cf; color: #1e2530; }
 .prj-card-action-btn.delete-btn:hover { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
 
-/* Status dropdown styled as a pill — sits in the card footer.
-   Border + chevron both use currentColor so they always match
-   whichever status color (Active/Completed/Cancelled) is applied
-   inline, instead of a flat black arrow sitting on a colored pill. */
 .prj-status-pill {
   font-size: 0.72rem;
   font-weight: 700;
@@ -135,12 +126,6 @@
   font-weight: 500;
 }
 
-/* ── Custom status dropdown (project cards) ──
-   A native <select>'s open list can't be styled reliably across
-   browsers, so the card grid uses a real button + floating menu
-   instead, giving full control over both the closed pill and the
-   open list. (The Project Detail page's status pill is still a
-   native <select> — .prj-status-pill above — untouched.) */
 .prj-status-dropdown { position: relative; flex-shrink: 0; }
 
 .prj-status-trigger {
@@ -207,18 +192,11 @@
   line-height: 1.3;
 }
 
-/* Stats grid */
 .prj-card-stats { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem .75rem; margin-bottom: .85rem; }
 .prj-stat       { display: flex; flex-direction: column; gap: 1px; }
 .prj-stat-lbl   { font-size: .69rem; color: #7c8a92; font-weight: 500; text-transform: uppercase; letter-spacing: .03em; }
 .prj-stat-val   { font-size: .83rem; font-weight: 600; color: #1e2530; }
 
-/* Invoice total / pending-to-collect strip — gives an at-a-glance view
-   of a project's money status right on the card, no need to open it.
-   Sits flush on the card's own background (no separate tinted box) so
-   every section of the card reads as one continuous surface, divided
-   only by hairlines — same treatment as the name block above it and
-   the footer below it. */
 .prj-card-finance {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -229,9 +207,7 @@
   margin-bottom: .1rem;
   border-top: 1px solid #eef5f4;
 }
-/* Decorative divider drawn as an overlay so it never affects column
-   widths — this keeps this row's columns pixel-aligned with the
-   Event Type / Event Date grid above it. */
+
 .prj-card-finance::before {
   content: '';
   position: absolute;
@@ -261,13 +237,10 @@
 }
 .prj-card-finance.empty .prj-fin-lbl { font-size: .72rem; }
 
-/* Footer: contact info */
 .prj-card-footer  { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding-top: .7rem; border-top: 1px solid #eef5f4; }
 .prj-card-address { display: flex; align-items: center; gap: 4px; font-size: .73rem; color: #7c8a92; min-width: 0; flex: 1; }
 .prj-card-address span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* "Open" — now a flex child inside .prj-card-footer, sitting on the
-   same line as the contact number instead of stacked below it. */
 .prj-card-open {
   display: flex;
   align-items: center;
@@ -278,7 +251,6 @@
   font-weight: 600;
 }
 
-/* ── Detail view ── */
 .prj-detail-bar {
   display: flex;
   align-items: center;
@@ -315,7 +287,6 @@
   color: #55636c;
 }
 
-/* ── Tabs ── */
 .prj-tabs {
   display: flex;
   gap: 4px;
@@ -343,7 +314,6 @@
 .prj-tab:hover { color: #0f766e; background: #e6f7f5; }
 .prj-tab.active { color: #0f766e; font-weight: 700; border-bottom-color: #0d9488; background: #e6f7f5; }
 
-/* ── Tab header (title + button) ── */
 .prj-tab-header {
   display: flex;
   align-items: center;
@@ -357,7 +327,6 @@
   margin: 0;
 }
 
-/* ── Action buttons in table rows ── */
 .prj-action-btn {
   display: inline-flex;
   align-items: center;
@@ -376,7 +345,6 @@
 .prj-action-btn.green:hover { background: #10b981; color: #fff; border-color: #10b981; }
 .prj-action-btn.danger:hover{ background: #fef2f2; color: #ef4444; border-color: #fecaca; }
 
-/* ── Invoice KPI cards ── */
 .prj-inv-kpi {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -408,7 +376,6 @@
 .prj-kpi-card.red::before   { background: linear-gradient(180deg, #ef4444, #b91c1c); }
 .prj-kpi-card.red strong   { color: #ef4444; }
 
-/* ── Quotation picker (client → quotations → invoice flow) ── */
 .prj-client-picker {
   display: flex; flex-wrap: wrap; gap: .5rem;
   margin-bottom: 1rem;

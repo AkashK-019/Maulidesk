@@ -34,7 +34,7 @@ export default function Header({ title }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const NEGLIGIBLE_BALANCE = 1; // ignore rounding dust under ₹1 — not a real due amount
+  const NEGLIGIBLE_BALANCE = 1; 
 
   const fetchRealtimeAlerts = async () => {
     setLoadingAlerts(true);
@@ -62,7 +62,6 @@ export default function Header({ title }) {
         });
       });
 
-      // ---------- Pending quotations awaiting a decision ----------
       const { data: quotations } = await supabase
         .from('quotations')
         .select('quotation_number, client_name, status')
@@ -77,10 +76,6 @@ export default function Header({ title }) {
         });
       });
 
-      // ---------- Labour payments still owed ----------
-      // Individuals earn via labour_attendance; crews earn via labour_crew_attendance
-      // (per member). Paid comes from labour_payments (lump-sum) plus
-      // labour_member_payments (per crew member). Balance = earned - paid.
       const [
         { data: labourers },
         { data: labourAttendance },

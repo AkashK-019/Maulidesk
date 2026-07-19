@@ -35,8 +35,6 @@
   color: var(--pd-ink);
 }
 
-/* ═══ Compact icon-only action row (used for the payment history table's
-   Print / Download / Share / Delete buttons) ═══ */
 .pd-icon-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end; flex-wrap: nowrap; }
 .pd-icon-btn {
   display: flex;
@@ -61,7 +59,6 @@
 .pd-icon-btn.danger { border-color: rgba(239, 68, 68, 0.3); color: var(--pd-red); }
 .pd-icon-btn.danger:hover { background: var(--pd-red-soft); }
 
-/* ═══ Header ═══ */
 .pd-header {
   container-type: inline-size;
   container-name: pd-header;
@@ -175,10 +172,6 @@
 }
 .pd-project-meta svg { color: var(--pd-accent); flex-shrink: 0; }
 
-/* Header narrows: back link hugs the left, status pill + edit button
-   sit together at their natural (content) width instead of being
-   stretched edge-to-edge — stretching left the status pill's short
-   label looking lost inside an oversized button. */
 @container pd-header (max-width: 460px) {
   .pd-header-top { flex-direction: column; align-items: stretch; }
   .pd-header-actions { justify-content: flex-start; }
@@ -186,8 +179,6 @@
   .pd-edit-btn { flex: 0 0 auto; }
 }
 
-/* ── Status pill — hide native <select> chrome, paint our own chevron
-   in the same color as the status text ── */
 .pd-status-select {
   appearance: none;
   -webkit-appearance: none;
@@ -212,7 +203,6 @@
 .pd-status-select:active { transform: scale(0.97); }
 .pd-status-select:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
-/* ═══ Tabs ═══ */
 .pd-tabs-scroll {
   position: relative;
   margin-bottom: clamp(1rem, 2.5vw, 1.25rem);
@@ -293,7 +283,6 @@
 }
 @container pd-tabbar (max-width: 420px) { .pd-tabs-scroll::after { opacity: 1; } }
 
-/* ═══ Tab content wrapper — container-query anchor for panels ═══ */
 .pd-tab-content {
   container-type: inline-size;
   container-name: pd-panel;
@@ -303,7 +292,6 @@
   min-width: 0;
 }
 
-/* ═══ Section bar (title + status + actions) ═══ */
 .pd-section-bar {
   display: flex;
   align-items: flex-start;
@@ -339,7 +327,6 @@
   border-radius: 20px;
 }
 
-/* ═══ Action buttons (Print / PDF / WhatsApp) ═══ */
 .pd-action-group { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .pd-action-btn {
@@ -368,7 +355,6 @@
   .pd-action-btn { padding: 0.5rem; width: 34px; height: 34px; justify-content: center; }
 }
 
-/* ═══ Info grid (client / event / amount cards) ═══ */
 .pd-info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
@@ -436,11 +422,6 @@
   color: var(--pd-accent-dark);
 }
 
-/* ═══ Items table — IDENTICAL layout and styling on every screen size,
-   desktop or mobile. The wrap itself is the horizontal-scroll viewport;
-   the table never reflows into stacked cards or changes appearance.
-   Edge shadows fade in/out automatically as the user scrolls (pure CSS,
-   no JS) so there's always a clear hint that more columns exist. ═══ */
 .pd-items-table-wrap {
   position: relative;
   border: 1px solid var(--pd-border);
@@ -452,13 +433,6 @@
   scrollbar-width: thin;
   scrollbar-color: var(--pd-border) transparent;
 
-  /* Self-hiding scroll shadows: two "cover" gradients scroll with the
-     content (background-attachment: local) and mask the shadows near
-     the start/end of the table; two radial "shadow" gradients stay
-     pinned to the viewport (background-attachment: scroll). The net
-     effect is a shadow that only appears on the side(s) where there's
-     more content to reveal — and none at all if the table already
-     fits, e.g. on a wide desktop screen. */
   background-image:
     linear-gradient(to right, var(--pd-card) 50%, rgba(255, 255, 255, 0)),
     linear-gradient(to left, var(--pd-card) 50%, rgba(255, 255, 255, 0)),
@@ -512,10 +486,6 @@
 .pd-item-amount { font-weight: 700; color: var(--pd-ink); white-space: nowrap; }
 .pd-item-action { white-space: nowrap; }
 
-/* Small "swipe to see more" hint — an optional <p className="pd-scroll-hint">
-   placed just above a .pd-items-table-wrap in the tab components. Hidden by
-   default; only shown once the panel is narrow enough that the table is
-   likely to overflow, so it never appears on desktop. */
 .pd-scroll-hint {
   display: none;
   align-items: center;
@@ -529,7 +499,6 @@
   .pd-scroll-hint { display: flex; }
 }
 
-/* ═══ Notes box ═══ */
 .pd-notes-box {
   background: var(--pd-accent-soft);
   border: 1px solid rgba(13, 148, 136, 0.18);
@@ -552,7 +521,6 @@
   overflow-wrap: break-word;
 }
 
-/* ═══ Empty state ═══ */
 .pd-empty {
   display: flex;
   flex-direction: column;
@@ -583,7 +551,6 @@
   line-height: 1.5;
 }
 
-/* ═══ Progress / paid banners ═══ */
 .pd-paid-banner {
   display: flex;
   align-items: center;
@@ -637,8 +604,6 @@
   gap: 0.4rem 1rem;
 }
 
-/* ═══ Payment KPIs — icon-tile style, matching .prj-metric on the
-   Projects list page for visual consistency across the app ═══ */
 .pd-pay-kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
@@ -702,15 +667,6 @@
   box-shadow: var(--pd-shadow-xs);
 }
 
-/* ═══ Modal (.pd-modal) — always a properly contained popup: header and
-   footer stay fixed, only the body scrolls internally. Previously this
-   only applied inside the narrow-viewport media query below, so on a
-   normal desktop window with a tall form (e.g. Edit Project) the modal
-   could overflow past the bottom of the screen with no way to reach the
-   Save button. ═══ */
-/* Belt-and-braces: guarantee the Edit Project overlay is centered and
-   blurs the page behind it, regardless of whatever the shared global
-   .modal-overlay rule happens to do elsewhere in the app. */
 .modal-overlay:has(.pd-modal) {
   position: fixed;
   inset: 0;
@@ -820,18 +776,7 @@
   .animate-fade { animation: none; }
 }
 
-/* ═══ Record Payment popup — fully self-contained, does NOT reuse the
-   shared .modal-overlay / .modal-content system. It sets its own fixed,
-   full-viewport, centered overlay so nothing else on the page (or any
-   other global modal rule) can affect its position or scrolling. The
-   card is a flex column with a fixed head + foot and a body that's the
-   only part that scrolls. ═══ */
 .pd-rcpt-overlay {
-  /* Re-declare the design-token variables here because this element is
-     rendered via createPortal(document.body), which detaches it from the
-     .pd-page DOM subtree where these vars are normally defined. CSS custom
-     properties inherit through the real DOM tree, not the React tree, so
-     without this the modal loses all its colors, radii, and shadows. */
   --pd-accent: #0d9488;
   --pd-accent-dark: #0f766e;
   --pd-accent-soft: #e6f7f5;

@@ -116,7 +116,6 @@ export default function Settings() {
     }
   };
 
-  // Change password handler
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
@@ -143,7 +142,6 @@ export default function Settings() {
     }
   };
 
-  // Create new user (Sign up + profile creation)
   const handleCreateUser = async (e) => {
     e.preventDefault();
     if (!isAdmin) return; // guard
@@ -177,10 +175,6 @@ export default function Settings() {
       }
       if (data?.error) throw new Error(data.error);
 
-      // Account is created active immediately — no activation email or
-      // confirmation step required. Show the admin the password once, so
-      // it can be shared with the new user. Supabase never emails the
-      // password itself.
       alert(
         `Account created for ${newUserEmail}.\n\n` +
         `The account is active — they can sign in right away.\n\n` +
@@ -206,9 +200,8 @@ export default function Settings() {
   };
 
   const handleEditPermissions = (u) => {
-    if (!isAdmin) return; // guard
+    if (!isAdmin) return; 
     setEditingUser(u);
-    // Prepare permission checkboxes
     const permissions = {
       dashboard: u.allowed_pages?.includes('dashboard') || false,
       projects: u.allowed_pages?.includes('projects') || false,

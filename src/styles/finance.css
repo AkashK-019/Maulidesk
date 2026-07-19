@@ -1,8 +1,4 @@
-/* ══════════════════════════════════════════
-   Finance Page Styles
-══════════════════════════════════════════ */
 
-/* ── Top Bar ── */
 .fin-topbar {
   display: flex;
   align-items: flex-start;
@@ -32,7 +28,6 @@
   flex-wrap: wrap;
 }
 
-/* ── Period Tabs ── */
 .fin-period-tabs {
   display: flex;
   background: white;
@@ -77,7 +72,6 @@
   justify-content: center;
 }
 
-/* ── Loader ── */
 .fin-loader {
   display: flex;
   flex-direction: column;
@@ -89,9 +83,6 @@
   font-size: 0.9rem;
 }
 
-/* ══════════════════════════════════════════
-   KPI Cards
-══════════════════════════════════════════ */
 .fin-kpi-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -160,9 +151,6 @@
   color: var(--text-muted);
 }
 
-/* ══════════════════════════════════════════
-   Charts Layout
-══════════════════════════════════════════ */
 .fin-chart-row {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -297,9 +285,6 @@
   margin: 0.25rem 0;
 }
 
-/* ══════════════════════════════════════════
-   RESPONSIVE
-══════════════════════════════════════════ */
 
 /* Large tablet → 3 KPIs per row */
 @media (max-width: 1280px) {
@@ -349,7 +334,6 @@
   }
 }
 
-/* Mobile */
 @media (max-width: 520px) {
   .fin-kpi-grid {
     grid-template-columns: 1fr 1fr;
@@ -401,16 +385,12 @@
   }
 }
 
-/* Extra small — only drop to a single column on genuinely tiny screens */
 @media (max-width: 340px) {
   .fin-kpi-grid {
     grid-template-columns: 1fr;
   }
 }
 
-/* ══════════════════════════════════════════
-   YoY Delta badges (on KPI cards)
-══════════════════════════════════════════ */
 .fin-kpi-foot {
   display: flex;
   align-items: center;
@@ -445,9 +425,6 @@
   background: rgba(148,163,184,0.15);
 }
 
-/* ══════════════════════════════════════════
-   Year-over-year overview card
-══════════════════════════════════════════ */
 .fin-yoy-card {
   margin-bottom: 1.25rem;
 }
@@ -497,9 +474,6 @@
   margin: 0.15rem 0;
 }
 
-/* ══════════════════════════════════════════
-   Plain-language insight cards
-══════════════════════════════════════════ */
 .fin-insights-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -530,9 +504,6 @@
   margin-top: 0.1rem;
 }
 
-/* ══════════════════════════════════════════
-   This Year vs Last Year comparison table
-══════════════════════════════════════════ */
 .fin-cmp-table {
   display: flex;
   flex-direction: column;
@@ -592,8 +563,6 @@
 .fin-cmp-up   { color: #0a8f5b; }
 .fin-cmp-down { color: #dc2626; }
 
-/* Mobile — rows become compact mini-cards: metric name on its own line,
-   then This Year / Last Year / Change stacked as labeled mini-columns. */
 @media (max-width: 640px) {
   .fin-cmp-row {
     grid-template-columns: 1fr 1fr 1fr;
@@ -657,9 +626,6 @@
   }
 }
 
-/* ══════════════════════════════════════════
-   RESPONSIVE — new sections
-══════════════════════════════════════════ */
 @media (max-width: 1024px) {
   .fin-yoy-body {
     grid-template-columns: 1fr;

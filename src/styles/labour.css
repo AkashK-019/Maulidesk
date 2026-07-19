@@ -1,20 +1,9 @@
-/* ============================================================
-   labour.css
-   Styles for the consolidated Labour Management workspace
-   (dual-pane: worker list + tabbed detail workspace)
-   ============================================================ */
 
-/* Root-cause fix for the mobile overflow: without border-box, an element's
-   padding gets ADDED on top of width:100%, so it silently grows past its
-   container — which is exactly what was pushing the financial cards and
-   calendar off the right edge of the screen. Scoped to just these two pages
-   so it can't affect anything else in the app. */
 .labour-workspace, .labour-workspace *,
 .labour-quick-page, .labour-quick-page * {
   box-sizing: border-box;
 }
 
-/* ---------- Layout shell ---------- */
 .labour-workspace {
   display: grid;
   grid-template-columns: 400px 1fr;
@@ -23,9 +12,7 @@
 }
 
 .labour-workspace > * {
-  min-width: 0; /* grid items default to min-width:auto, which blocks shrinking
-                   below their content's natural size — this is what let a wide
-                   table or calendar force the whole row past the viewport. */
+  min-width: 0; 
 }
 
 @media (max-width: 900px) {
@@ -34,7 +21,6 @@
   }
 }
 
-/* ---------- List Pane (left) ---------- */
 .labour-list-pane {
   background: #ffffff;
   border: 1px solid var(--border);
@@ -44,8 +30,8 @@
   overflow: hidden;
   position: sticky;
   top: 1rem;
-  max-height: calc(100vh - 2rem);   /* fallback for older browsers */
-  max-height: calc(100dvh - 2rem);  /* recalculates as the browser's address bar shows/hides, instead of jumping */
+  max-height: calc(100vh - 2rem);   
+  max-height: calc(100dvh - 2rem); 
 }
 
 .labour-list-header {
@@ -109,7 +95,6 @@
   color: var(--primary);
 }
 
-/* Filter pills + result count toolbar */
 .labour-list-toolbar {
   display: flex;
   align-items: center;
@@ -177,7 +162,6 @@
   border-radius: 999px;
 }
 
-/* ---------- List item card ---------- */
 .labour-list-item {
   display: flex;
   flex-direction: column;
@@ -237,7 +221,6 @@
   margin-top: 3px;
 }
 
-/* Roll-call quick-mark row on each card */
 .labour-rollcall-row {
   display: flex;
   align-items: center;
@@ -309,7 +292,6 @@
   color: #92720f;
 }
 
-/* ---------- Detail Workspace Pane (right) ---------- */
 .labour-workspace-pane {
   background: #ffffff;
   border: 1px solid var(--border);
@@ -332,7 +314,6 @@
   text-align: center;
 }
 
-/* Mobile "back to list" — hidden on desktop, shown only under the mobile breakpoint below */
 .labour-mobile-back {
   display: none;
   align-items: center;
@@ -356,7 +337,6 @@
   gap: 0.75rem;
 }
 
-/* ---------- Tabs (gold underline) ---------- */
 .labour-tabs {
   display: flex;
   gap: 0.25rem;
@@ -395,7 +375,6 @@
   overflow-x: hidden;
 }
 
-/* ---------- Financial cards ---------- */
 .labour-financial-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -408,7 +387,7 @@
   padding: 0.9rem 1rem;
   background: #faf9f6;
   border: 1px solid var(--border);
-  min-width: 0; /* let grid tracks shrink instead of forcing overflow */
+  min-width: 0; 
   overflow: hidden;
 }
 
@@ -456,7 +435,6 @@
   color: #10b981;
 }
 
-/* ---------- Monthly Ledger (per-month earned/paid/balance) ---------- */
 .labour-month-ledger {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -551,7 +529,6 @@
   font-weight: 700;
 }
 
-/* ---------- Table wrappers (scoped scrollbars) ---------- */
 .labour-table-scroll {
   max-height: 360px;
   overflow-y: auto;
@@ -579,7 +556,6 @@
   z-index: 1;
 }
 
-/* ---------- Log Attendance / Payment inline forms ---------- */
 .labour-inline-form {
   display: flex;
   flex-wrap: wrap;
@@ -670,7 +646,6 @@
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
 }
 
-/* Up to 9 o'clock (1.5 shifts) — teal */
 .labour-status-toggle.onehalf {
   border-color: #14b8a6;
   color: #0d9488;
@@ -682,7 +657,6 @@
   box-shadow: 0 2px 8px rgba(20, 184, 166, 0.35);
 }
 
-/* 2 shifts — blue */
 .labour-status-toggle.double {
   border-color: #3b82f6;
   color: #2563eb;
@@ -694,7 +668,6 @@
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
 }
 
-/* 2.5 shifts (PP1/2) — cyan */
 .labour-status-toggle.doublehalf {
   border-color: #06b6d4;
   color: #0e7490;
@@ -718,7 +691,6 @@
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
 }
 
-/* Clear — neutral grey, always available as an "undo" action */
 .labour-status-toggle.clear {
   border-color: #d1d5db;
   color: #6b7280;
@@ -730,7 +702,6 @@
   background: #f3f4f6;
 }
 
-/* ---------- Monthly attendance calendar ---------- */
 .labour-calendar-card {
   background: #faf9f6;
   border: 1px solid var(--border);
@@ -940,7 +911,6 @@
   min-width: 120px;
 }
 
-/* ---------- Crew day popup (per-member attendance) ---------- */
 .modal-content.crew-popup {
   max-width: 560px;
   width: 100%;
@@ -1050,13 +1020,7 @@
   color: var(--text-muted);
 }
 
-/* ============================================================
-   Mobile responsive overrides
-   ============================================================ */
 @media (max-width: 900px) {
-  /* Drill-down navigation: on mobile the list and detail workspace can't fit
-     side by side with ~200 people in the list, so show one screen at a time —
-     the list, or the selected labourer's workspace — like a phone app. */
   .labour-list-pane {
     position: static;
     max-height: none;
@@ -1081,8 +1045,6 @@
 }
 
 @media (max-width: 640px) {
-  /* Search stays put at the top of the list as it scrolls, since with ~200
-     names people will be scrolling a lot before they find who they need. */
   .labour-list-header {
     position: sticky;
     top: 0;
@@ -1129,7 +1091,6 @@
     text-align: center;
   }
 
-  /* Financial cards: 2-up instead of squeezing 3-4 into a tiny row */
   .labour-financial-row {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.6rem;
@@ -1139,7 +1100,6 @@
     font-size: 1.05rem;
   }
 
-  /* Inline forms: stack full-width */
   .labour-inline-form {
     flex-direction: column;
     align-items: stretch;
@@ -1167,7 +1127,6 @@
     font-size: 0.8rem;
   }
 
-  /* Roll-call quick-mark buttons on each card need to stay thumb-friendly */
   .labour-status-toggle-group.sm .labour-status-toggle {
     min-width: 36px;
     min-height: 34px;
@@ -1179,7 +1138,6 @@
     justify-content: flex-start;
   }
 
-  /* Calendar: fill available width instead of a fixed desktop cap */
   .labour-calendar-card {
     max-width: 100%;
     box-sizing: border-box;
@@ -1206,7 +1164,6 @@
     gap: 0.35rem 0.6rem;
   }
 
-  /* Tables: allow horizontal scroll instead of squashing columns unreadably */
   .labour-table-scroll {
     max-height: 320px;
     overflow-x: auto;
@@ -1268,23 +1225,14 @@
   .labour-calendar-cell .day-pay {
     font-size: 0.5rem;
   }
-}/* ============================================================
-   labour.css
-   Styles for the consolidated Labour Management workspace
-   (dual-pane: worker list + tabbed detail workspace)
-   ============================================================ */
+}
 
-/* Root-cause fix for the mobile overflow: without border-box, an element's
-   padding gets ADDED on top of width:100%, so it silently grows past its
-   container — which is exactly what was pushing the financial cards and
-   calendar off the right edge of the screen. Scoped to just these two pages
-   so it can't affect anything else in the app. */
+
 .labour-workspace, .labour-workspace *,
 .labour-quick-page, .labour-quick-page * {
   box-sizing: border-box;
 }
 
-/* ---------- Layout shell ---------- */
 .labour-workspace {
   display: grid;
   grid-template-columns: 400px 1fr;
@@ -1293,9 +1241,7 @@
 }
 
 .labour-workspace > * {
-  min-width: 0; /* grid items default to min-width:auto, which blocks shrinking
-                   below their content's natural size — this is what let a wide
-                   table or calendar force the whole row past the viewport. */
+  min-width: 0; 
 }
 
 @media (max-width: 900px) {
@@ -1304,7 +1250,6 @@
   }
 }
 
-/* ---------- List Pane (left) ---------- */
 .labour-list-pane {
   background: #ffffff;
   border: 1px solid var(--border);
@@ -1314,8 +1259,8 @@
   overflow: hidden;
   position: sticky;
   top: 1rem;
-  max-height: calc(100vh - 2rem);   /* fallback for older browsers */
-  max-height: calc(100dvh - 2rem);  /* recalculates as the browser's address bar shows/hides, instead of jumping */
+  max-height: calc(100vh - 2rem);   
+  max-height: calc(100dvh - 2rem);  
 }
 
 .labour-list-header {
@@ -1379,7 +1324,6 @@
   color: var(--primary);
 }
 
-/* Filter pills + result count toolbar */
 .labour-list-toolbar {
   display: flex;
   align-items: center;
@@ -1447,7 +1391,6 @@
   border-radius: 999px;
 }
 
-/* ---------- List item card ---------- */
 .labour-list-item {
   display: flex;
   flex-direction: column;
@@ -1602,7 +1545,6 @@
   text-align: center;
 }
 
-/* Mobile "back to list" — hidden on desktop, shown only under the mobile breakpoint below */
 .labour-mobile-back {
   display: none;
   align-items: center;
@@ -1626,7 +1568,6 @@
   gap: 0.75rem;
 }
 
-/* ---------- Tabs (gold underline) ---------- */
 .labour-tabs {
   display: flex;
   gap: 0.25rem;
@@ -1665,7 +1606,6 @@
   overflow-x: hidden;
 }
 
-/* ---------- Financial cards ---------- */
 .labour-financial-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1678,7 +1618,7 @@
   padding: 0.9rem 1rem;
   background: #faf9f6;
   border: 1px solid var(--border);
-  min-width: 0; /* let grid tracks shrink instead of forcing overflow */
+  min-width: 0; 
   overflow: hidden;
 }
 
@@ -1726,7 +1666,6 @@
   color: #10b981;
 }
 
-/* ---------- Monthly Ledger (per-month earned/paid/balance) ---------- */
 .labour-month-ledger {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -1821,7 +1760,6 @@
   font-weight: 700;
 }
 
-/* ---------- Table wrappers (scoped scrollbars) ---------- */
 .labour-table-scroll {
   max-height: 360px;
   overflow-y: auto;
@@ -1849,7 +1787,6 @@
   z-index: 1;
 }
 
-/* ---------- Log Attendance / Payment inline forms ---------- */
 .labour-inline-form {
   display: flex;
   flex-wrap: wrap;
@@ -1940,7 +1877,6 @@
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
 }
 
-/* Up to 9 o'clock (1.5 shifts) — teal */
 .labour-status-toggle.onehalf {
   border-color: #14b8a6;
   color: #0d9488;
@@ -1988,7 +1924,6 @@
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
 }
 
-/* Clear — neutral grey, always available as an "undo" action */
 .labour-status-toggle.clear {
   border-color: #d1d5db;
   color: #6b7280;
@@ -2000,7 +1935,6 @@
   background: #f3f4f6;
 }
 
-/* ---------- Monthly attendance calendar ---------- */
 .labour-calendar-card {
   background: #faf9f6;
   border: 1px solid var(--border);

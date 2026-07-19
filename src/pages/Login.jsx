@@ -41,10 +41,6 @@ export default function Login() {
 
     setSubmitting(true);
 
-    // Anonymous visitors can't read `profiles` directly (RLS correctly
-    // blocks that), so this check goes through a small Edge Function that
-    // uses the service role to safely answer just "is this email an Admin?"
-    // without exposing any other profile data.
     let checkResult;
     try {
       const { data, error: fnErr } = await supabase.functions.invoke('check-admin-email', {

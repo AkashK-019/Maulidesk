@@ -15,8 +15,6 @@ const EVENT_TYPES = ['Wedding', 'Birthday', 'Corporate', 'Anniversary', 'Engagem
 const STATUS_FILTERS = ['All', 'Active', 'Completed', 'Cancelled'];
 const STATUS_OPTIONS  = ['Active', 'Completed', 'Cancelled'];
 
-/* Rounding tolerance: any pending balance at or below this is treated as
-   Fully Paid, so negligible paisa-level differences don't show as "Pending". */
 const PENDING_ROUND_TOLERANCE = 1;
 
 const STATUS_CONFIG = {
@@ -42,8 +40,7 @@ export default function Projects() {
   });
   const [saving, setSaving] = useState(false);
 
-  /* ── Custom status dropdown (replaces native <select> for full style control) ── */
-  const [statusMenuOpen, setStatusMenuOpen] = useState(null); // holds the open project's id
+  const [statusMenuOpen, setStatusMenuOpen] = useState(null); 
   const statusMenuRef = useRef(null);
 
   useEffect(() => {
@@ -99,7 +96,6 @@ export default function Projects() {
     } finally { setLoading(false); }
   };
 
-  /* ── Project CRUD ── */
   const openEditProject = (p, e) => {
     e.stopPropagation();
     setEditingProject(p);

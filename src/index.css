@@ -2,15 +2,15 @@
 
 :root {
   --primary: #1e2530;         
-  --primary-light: #3f4b54;    /* Lighter Charcoal / slate */
-  --primary-subtle: #eefaf8;   /* Pale Teal background */
-  --accent: #0d9488;           /* Teal */
-  --accent-light: #f0fdfa;     /* Light Teal wash */
-  --bg: #F7F9F9;               /* Soft cool off-white */
+  --primary-light: #3f4b54;   
+  --primary-subtle: #eefaf8;  
+  --accent: #0d9488;         
+  --accent-light: #f0fdfa;    
+  --bg: #F7F9F9;             
   --card-bg: rgba(255, 255, 255, 0.95);
-  --text: #1e2530;             /* Charcoal text */
-  --text-muted: #74838c;       /* Muted charcoal-grey */
-  --border: #e1e9e8;           /* Soft teal-tinted border */
+  --text: #1e2530;           
+  --text-muted: #74838c;      
+  --border: #e1e9e8;           
   --radius: 12px;
   --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --shadow-sm: 0 1px 2px 0 rgba(15, 23, 22, 0.05);
@@ -49,7 +49,6 @@ a, button, input, select, textarea, .card, .tab-button {
 ::-webkit-scrollbar-thumb { background: #cfe0dd; border-radius: 9999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* Layout Grid */
 .app-container {
   display: flex;
   height: 100vh;
@@ -104,7 +103,6 @@ a, button, input, select, textarea, .card, .tab-button {
   cursor: not-allowed;
 }
 
-/* Buttons */
 .btn-primary {
   background-color: var(--primary);
   color: white;
@@ -165,7 +163,6 @@ a, button, input, select, textarea, .card, .tab-button {
   transform: translateY(-1px);
 }
 
-/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -174,7 +171,6 @@ a, button, input, select, textarea, .card, .tab-button {
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Tables */
 .table-responsive {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -207,7 +203,6 @@ a, button, input, select, textarea, .card, .tab-button {
 .app-table tbody tr:hover { background-color: rgba(13, 148, 136, 0.04); }
 .app-table tbody tr:last-child td { border-bottom: none; }
 
-/* Badges */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -223,7 +218,6 @@ a, button, input, select, textarea, .card, .tab-button {
 .badge-info    { background: #e0f2fe; color: #0369a1; }
 .badge-neutral { background: #f1f5f9; color: #475569; }
 
-/* Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -235,6 +229,7 @@ a, button, input, select, textarea, .card, .tab-button {
   justify-content: center;
   padding: 1rem;
 }
+
 .modal-content {
   background: white;
   border-radius: 16px;
@@ -263,7 +258,6 @@ a, button, input, select, textarea, .card, .tab-button {
   background-color: #f6faf9;
 }
 
-/* Forms */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -287,7 +281,6 @@ a, button, input, select, textarea, .card, .tab-button {
   .form-grid { grid-template-columns: 1fr; }
 }
 
-/* Document / Invoice Styling */
 .document-preview-box {
   background: #fff;
   border: 1px solid #ddd;
@@ -359,15 +352,10 @@ a, button, input, select, textarea, .card, .tab-button {
   padding-top: 1rem;
 }
 
-/* ══════════════════════════════════════════
-   SIDEBAR — Mobile Responsive
-══════════════════════════════════════════ */
-
 .gs-sidebar {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* On mobile: sidebar slides off screen */
 @media (max-width: 850px) {
   .gs-sidebar {
     position: fixed !important;
@@ -405,10 +393,6 @@ a, button, input, select, textarea, .card, .tab-button {
   }
 }
 
-/* ══════════════════════════════════════════
-   SIDEBAR BACKDROP OVERLAY
-══════════════════════════════════════════ */
-
 .sidebar-backdrop {
   display: none;
   position: fixed;
@@ -422,18 +406,12 @@ a, button, input, select, textarea, .card, .tab-button {
   display: block;
 }
 
-/* ══════════════════════════════════════════
-   RESPONSIVE LAYOUT HELPERS
-══════════════════════════════════════════ */
-
-/* Settings two-column → single column */
 @media (max-width: 1024px) {
   .settings-grid {
     grid-template-columns: 1fr !important;
   }
 }
 
-/* Tablet: compact modal */
 @media (max-width: 768px) {
   .modal-content {
     max-width: 100%;
@@ -459,12 +437,10 @@ a, button, input, select, textarea, .card, .tab-button {
     font-size: 0.82rem;
   }
 
-  /* KPI cards: 2 per row on tablet */
   .db-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 
-  /* Document preview */
   .document-preview-details,
   .pdf-meta-grid {
     grid-template-columns: 1fr !important;
@@ -472,7 +448,6 @@ a, button, input, select, textarea, .card, .tab-button {
   }
 }
 
-/* Mobile: single column everything */
 @media (max-width: 520px) {
   .db-grid {
     grid-template-columns: 1fr !important;
@@ -527,16 +502,12 @@ a, button, input, select, textarea, .card, .tab-button {
     padding: 0.55rem 0.9rem;
   }
 
-  /* Attendance table compact */
   .app-table th:nth-child(n+5),
   .app-table td:nth-child(n+5) {
     display: none;
   }
 }
 
-/* ══════════════════════════════════════════
-   SPIN ANIMATION (shared)
-══════════════════════════════════════════ */
 
 @keyframes spin {
   to { transform: rotate(360deg); }

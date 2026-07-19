@@ -11,7 +11,6 @@ import {
 import { formatCurrency } from '../utils/helpers';
 import '../styles/dashboard.css';
 
-// Rounding dust under ₹1 shouldn't count as a real unpaid/partial balance.
 const NEGLIGIBLE_BALANCE = 1;
 
 export default function Dashboard() {

@@ -1,7 +1,6 @@
--- Enable UUID generation
+
 create extension if not exists "uuid-ossp";
 
--- Clean up existing tables if they exist
 drop table if exists settings cascade;
 drop table if exists labour_payments cascade;
 drop table if exists labour_attendance cascade;
@@ -13,10 +12,8 @@ drop table if exists profiles cascade;
 
 drop type if exists user_role cascade;
 
--- ROLES ENUM
 create type user_role as enum ('Admin', 'Staff');
 
--- 1. USERS & ROLES
 create table profiles (
   id uuid references auth.users on delete cascade primary key,
   email text not null,
