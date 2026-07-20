@@ -28,7 +28,6 @@ const COMPANY_DEFAULTS = {
   termsAndConditions:['Prices are subject to change after the validity period.','All disputes subject to Maharashtra jurisdiction.'],
 };
 
-/* ─── Constants ─── */
 const EVENT_TYPES    = ['Wedding','Birthday','Corporate','Anniversary','Engagement','Other'];
 const STATUS_FILTERS = ['All','Pending','Approved'];
 const UNITS          = ['Nos','Sq.ft','Run.ft','Meter','Days','hr','Rolls'];
