@@ -2390,12 +2390,22 @@
     font-size: 0.8rem;
   }
 
-  /* Roll-call quick-mark buttons on each card need to stay thumb-friendly */
+  /* Roll-call quick-mark buttons on each card: 8 buttons (A, 1/2, P,
+     P1/2, PP, PP1/2, PPP, clear) have to share one row on a ~340px
+     wide card. A fixed min-width here used to force them wider than
+     the card, which pushed the whole card into horizontal scroll.
+     min-width:0 + flex:1 (from the base .sm rule) lets them shrink
+     evenly to fit instead. */
+  .labour-status-toggle-group.sm {
+    gap: 0.2rem;
+  }
+
   .labour-status-toggle-group.sm .labour-status-toggle {
-    min-width: 36px;
-    min-height: 34px;
-    padding: 0.3rem 0.5rem;
-    font-size: 0.72rem;
+    min-width: 0;
+    min-height: 30px;
+    padding: 0.25rem 0.1rem;
+    font-size: 0.6rem;
+    border-radius: 6px;
   }
 
   .labour-rollcall-row {
@@ -2501,5 +2511,85 @@
 
   .labour-calendar-cell .day-pay {
     font-size: 0.5rem;
+  }
+}
+/* ============================================================
+   FIX: Attendance status buttons (A, 1/2, P, P1/2, PP, PP1/2, PPP,
+   clear) on mobile -- both in the crew-popup and on each labourer's
+   card in the list.
+
+   Cramming all 8 buttons into a single row on a ~320px-wide card
+   only works if they're shrunk to the point of being unreadable
+   (that's what the previous single-row attempt did). Instead, lay
+   them out as a clean 4-column grid, so they wrap into exactly two
+   rows at a size that's still comfortable to read and tap, with no
+   horizontal scroll or overflow at any phone width.
+   ============================================================ */
+.modal-content.crew-popup {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 560px;
+}
+
+.crew-popup-bulk,
+.crew-popup-row {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    box-sizing: border-box;
+    padding: 0.75rem;
+  }
+
+  .modal-content.crew-popup {
+    max-width: 100%;
+  }
+
+  .modal-body {
+    overflow-x: hidden;
+  }
+
+  .crew-popup-bulk,
+  .crew-popup-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .crew-popup-bulk .labour-status-toggle-group,
+  .crew-popup-row .labour-status-toggle-group,
+  .labour-status-toggle-group.sm {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    width: 100%;
+    box-sizing: border-box;
+    gap: 0.35rem;
+  }
+
+  .crew-popup-bulk .labour-status-toggle-group .labour-status-toggle,
+  .crew-popup-row .labour-status-toggle-group .labour-status-toggle,
+  .labour-status-toggle-group.sm .labour-status-toggle {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 0.4rem 0.3rem;
+    min-height: 34px;
+    font-size: 0.74rem;
+    border-radius: 8px;
+  }
+
+  .labour-rollcall-row {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Very narrow phones: shrink one notch further. */
+  .crew-popup-bulk .labour-status-toggle-group .labour-status-toggle,
+  .crew-popup-row .labour-status-toggle-group .labour-status-toggle,
+  .labour-status-toggle-group.sm .labour-status-toggle {
+    padding: 0.35rem 0.2rem;
+    min-height: 32px;
+    font-size: 0.68rem;
   }
 }
