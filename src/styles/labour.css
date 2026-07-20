@@ -1,4 +1,3 @@
-
 .labour-workspace, .labour-workspace *,
 .labour-quick-page, .labour-quick-page * {
   box-sizing: border-box;
@@ -1167,10 +1166,30 @@
   .labour-table-scroll {
     max-height: 320px;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .labour-table-scroll table {
-    min-width: 480px;
+    min-width: 640px;
+  }
+
+  .labour-table-scroll th,
+  .labour-table-scroll td {
+    white-space: nowrap;
+  }
+
+  .labour-table-scroll td:last-child,
+  .labour-table-scroll th:last-child {
+    padding-right: 1rem;
+  }
+
+  /* index.css hides .app-table columns 5+ on screens <=520px (a global
+     declutter rule meant for other tables). Our Payment History / Attendance
+     tables rely on horizontal scroll instead, so every column -- including
+     Actions -- must stay visible here. */
+  .labour-table-scroll .app-table th:nth-child(n+5),
+  .labour-table-scroll .app-table td:nth-child(n+5) {
+    display: table-cell !important;
   }
 
   /* Quick roll-call page */
@@ -2414,10 +2433,21 @@
   .labour-table-scroll {
     max-height: 320px;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .labour-table-scroll table {
-    min-width: 480px;
+    min-width: 640px;
+  }
+
+  .labour-table-scroll th,
+  .labour-table-scroll td {
+    white-space: nowrap;
+  }
+
+  .labour-table-scroll td:last-child,
+  .labour-table-scroll th:last-child {
+    padding-right: 1rem;
   }
 
   /* Quick roll-call page */
